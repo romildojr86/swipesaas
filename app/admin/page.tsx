@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import type { Database } from '@/types/database'
 import type { SaasEntry } from '@/types'
 import AdminClient from '@/components/admin/AdminClient'
+import type { AdminProfile } from '@/components/admin/UsersTab'
 
 async function getSupabaseServerClient() {
   const cookieStore = await cookies()
@@ -55,10 +56,11 @@ export default async function AdminPage() {
 
   const { data: profileRows } = await supabase
     .from('profiles')
-    .select('created_at')
-    .order('created_at', { ascending: true })
+    .select('id, email, is_premium, created_at')
+    .order('created_at', { ascending: false })
 
-  const profileDates = (profileRows ?? []).map((r) => (r as { created_at: string }).created_at)
+  const allProfiles = (profileRows ?? []) as AdminProfile[]
+  const profileDates = allProfiles.map((r) => r.created_at)
 
   return (
     <AdminClient
@@ -66,6 +68,7 @@ export default async function AdminPage() {
       totalUsers={totalUsers ?? 0}
       premiumUsers={premiumUsers ?? 0}
       profileDates={profileDates}
+      initialProfiles={allProfiles}
     />
   )
 }

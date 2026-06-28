@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, ExternalLink,
   X, AlertTriangle, LogOut, Link as LinkIcon,
-  ChevronDown, Upload, ImageIcon, LayoutList, BarChart2,
+  ChevronDown, Upload, ImageIcon, LayoutList, BarChart2, Users,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
 import AnalyticsDashboard from './AnalyticsDashboard'
+import UsersTab, { type AdminProfile } from './UsersTab'
 
 const NICHOS = [
   'Productividad', 'Marketing', 'Finanzas', 'Educación', 'Salud',
@@ -88,9 +89,10 @@ interface Props {
   totalUsers: number
   premiumUsers: number
   profileDates: string[]
+  initialProfiles: AdminProfile[]
 }
 
-export default function AdminClient({ initialEntries, totalUsers, premiumUsers, profileDates }: Props) {
+export default function AdminClient({ initialEntries, totalUsers, premiumUsers, profileDates, initialProfiles }: Props) {
   const [entries, setEntries] = useState(initialEntries)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<SaasEntry | null>(null)
@@ -102,7 +104,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
-  const [activeTab, setActiveTab] = useState<'saas' | 'analytics'>('saas')
+  const [activeTab, setActiveTab] = useState<'catalogo' | 'analytics' | 'usuarios'>('catalogo')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -267,7 +269,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
             <span className="text-gold text-sm font-medium">Admin</span>
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'saas' && (
+            {activeTab === 'catalogo' && (
               <button
                 onClick={openAdd}
                 className="btn-gold flex items-center gap-1.5 px-4 py-2 rounded-md text-[#0a0a0a] text-sm font-semibold"
@@ -303,8 +305,9 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
           {/* Tab navigation */}
           <div className="flex items-center gap-0 border-b border-white/5 mb-6">
             {([
-              { key: 'saas', label: 'SaaS', icon: <LayoutList size={14} /> },
+              { key: 'catalogo', label: 'Catálogo', icon: <LayoutList size={14} /> },
               { key: 'analytics', label: 'Analytics', icon: <BarChart2 size={14} /> },
+              { key: 'usuarios', label: 'Usuarios', icon: <Users size={14} /> },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -323,8 +326,8 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
             ))}
           </div>
 
-          {/* Tab: SaaS */}
-          {activeTab === 'saas' && (
+          {/* Tab: Catálogo */}
+          {activeTab === 'catalogo' && (
             <div className="bg-[#111111] border border-white/5 rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                 <h2 className="text-white font-medium text-sm">Entradas del catálogo</h2>
@@ -422,6 +425,11 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
               premiumUsers={premiumUsers}
               profileDates={profileDates}
             />
+          )}
+
+          {/* Tab: Usuarios */}
+          {activeTab === 'usuarios' && (
+            <UsersTab initialProfiles={initialProfiles} />
           )}
         </motion.div>
       </div>
