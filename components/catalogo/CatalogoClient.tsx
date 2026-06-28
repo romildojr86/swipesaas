@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, LogOut, Database, Tag, Globe, RefreshCw,
-  ExternalLink, Megaphone, ChevronDown,
+  ChevronDown, X, ExternalLink, Megaphone,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -58,6 +58,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
   const [nichoFilter, setNichoFilter] = useState('Todos')
   const [paisFilter, setPaisFilter] = useState('Todos')
   const [modeloFilter, setModeloFilter] = useState('Todos')
+  const [selectedEntry, setSelectedEntry] = useState<SaasEntry | null>(null)
   const router = useRouter()
 
   const supabase = createBrowserClient(
@@ -140,9 +141,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
           className="mb-7"
         >
           <h1 className="font-syne font-semibold text-white text-4xl mb-1">Catálogo</h1>
-          <p className="text-text-secondary text-sm">
-            {filtered.length} SaaS disponibles
-          </p>
+          <p className="text-text-secondary text-sm">{filtered.length} SaaS disponibles</p>
         </motion.div>
 
         {/* Stats row */}
@@ -177,7 +176,6 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
           transition={{ delay: 0.14, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-3 mb-8"
         >
-          {/* Search bar */}
           <div className="relative">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
             <input
@@ -188,8 +186,6 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
               className="w-full bg-[#111111] border border-white/8 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
             />
           </div>
-
-          {/* Dropdown row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {dropdowns.map(({ value, set, options, placeholder }) => (
               <div key={placeholder} className="relative">
@@ -235,32 +231,20 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                     className="relative h-[180px] flex items-center justify-center overflow-hidden shrink-0"
                     style={{ background: '#161616' }}
                   >
-                    {/* Radial glow behind emoji */}
                     <div
                       className="absolute inset-0"
                       style={{
                         background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)`,
                       }}
                     />
-
-                    {/* Status badge */}
                     <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-black/50 border border-gold/25 rounded-full px-2.5 py-1 backdrop-blur-sm">
                       <span className="text-[10px] leading-none">🚀</span>
                       <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
                     </div>
-
-                    {/* Emoji */}
-                    <span
-                      className="relative z-10 select-none"
-                      style={{ fontSize: 56, lineHeight: 1 }}
-                    >
+                    <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>
                       {emoji}
                     </span>
-
-                    {/* Fade blend into card body */}
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
-
-                    {/* Hover shimmer overlay */}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                       style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }}
@@ -269,15 +253,11 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
 
                   {/* Body */}
                   <div className="flex flex-col flex-1 p-4 gap-3">
-
-                    {/* Name + country */}
                     <div>
                       <h3 className="text-white font-semibold text-[1.05rem] leading-snug truncate mb-0.5">
                         {entry.nome}
                       </h3>
-                      <p className="text-text-muted text-xs">
-                        {flag} {entry.pais_origen}
-                      </p>
+                      <p className="text-text-muted text-xs">{flag} {entry.pais_origen}</p>
                     </div>
 
                     {/* Metrics */}
@@ -292,42 +272,13 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="grid grid-cols-2 gap-2 mt-auto pt-0.5">
-                      {entry.link_site ? (
-                        <a
-                          href={entry.link_site}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-white/10 text-text-secondary text-[11px] font-medium hover:border-white/25 hover:text-white transition-colors"
-                        >
-                          <ExternalLink size={11} />
-                          Ver sitio
-                        </a>
-                      ) : (
-                        <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-white/5 text-text-muted text-[11px] opacity-40 cursor-not-allowed">
-                          <ExternalLink size={11} />
-                          Ver sitio
-                        </span>
-                      )}
-
-                      {entry.link_anuncios ? (
-                        <a
-                          href={entry.link_anuncios}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-gold flex items-center justify-center gap-1.5 py-2 rounded-lg text-[#0a0a0a] text-[11px] font-semibold"
-                        >
-                          <Megaphone size={11} />
-                          Ver anuncios
-                        </a>
-                      ) : (
-                        <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gold/8 border border-gold/15 text-gold/35 text-[11px] font-semibold cursor-not-allowed">
-                          <Megaphone size={11} />
-                          Ver anuncios
-                        </span>
-                      )}
-                    </div>
+                    {/* Single CTA */}
+                    <button
+                      onClick={() => setSelectedEntry(entry)}
+                      className="mt-auto w-full py-2 rounded-lg border border-gold/30 text-gold text-[11px] font-semibold hover:bg-gold/8 hover:border-gold/50 transition-colors"
+                    >
+                      Ver detalles
+                    </button>
                   </div>
                 </motion.div>
               )
@@ -335,6 +286,129 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
           </div>
         )}
       </div>
+
+      {/* Details modal */}
+      <AnimatePresence>
+        {selectedEntry && (() => {
+          const e = selectedEntry
+          const emoji = e.emoji || e.nome[0]
+          const flag = flagMap[e.pais_origen] ?? ''
+
+          return (
+            <motion.div
+              key="details-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              onClick={(ev) => { if (ev.target === ev.currentTarget) setSelectedEntry(null) }}
+            >
+              <motion.div
+                key="details-card"
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="relative bg-[#111111] border border-gold/20 rounded-2xl w-full max-w-[560px] overflow-hidden"
+                style={{ boxShadow: '0 0 60px rgba(201,168,76,0.08), 0 24px 60px rgba(0,0,0,0.6)' }}
+              >
+                {/* Subtle top glow line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
+
+                {/* Header */}
+                <div className="flex items-center gap-4 px-6 pt-6 pb-5">
+                  <span className="select-none shrink-0" style={{ fontSize: 48, lineHeight: 1 }}>{emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-syne font-bold text-white text-2xl leading-tight truncate">
+                      {e.nome}
+                    </h2>
+                    <p className="text-text-secondary text-sm mt-0.5">{flag} {e.pais_origen}</p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedEntry(null)}
+                    className="shrink-0 text-text-secondary hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 self-start"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-white/5 mx-6" />
+
+                {/* Metrics 2x2 */}
+                <div className="grid grid-cols-2 gap-3 px-6 py-5">
+                  {/* MRR */}
+                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                      <span>💰</span> MRR Estimado
+                    </p>
+                    <p className="text-gold font-syne font-bold text-xl leading-none">
+                      {e.mrr || '—'}
+                    </p>
+                  </div>
+
+                  {/* Modelo */}
+                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                      <span>📊</span> Modelo
+                    </p>
+                    <p className="text-white font-semibold text-base leading-none">
+                      {e.modelo_preco}
+                    </p>
+                  </div>
+
+                  {/* Nicho */}
+                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                      <span>🎯</span> Nicho
+                    </p>
+                    <p className="text-gold font-semibold text-base leading-none">
+                      {e.nicho}
+                    </p>
+                  </div>
+
+                  {/* País */}
+                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                      <span>🌍</span> País
+                    </p>
+                    <p className="text-white font-semibold text-base leading-none">
+                      {flag} {e.pais_origen}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="px-6 pb-6 flex flex-col gap-2.5">
+                  {e.link_site && (
+                    <a
+                      href={e.link_site}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-white/12 text-text-secondary hover:text-white hover:border-white/25 text-sm font-medium transition-colors"
+                    >
+                      <ExternalLink size={14} />
+                      Ver sitio web
+                    </a>
+                  )}
+                  {e.link_anuncios && (
+                    <a
+                      href={e.link_anuncios}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-gold flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[#0a0a0a] text-sm font-semibold"
+                    >
+                      <Megaphone size={14} />
+                      Ver anuncios en Meta
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )
+        })()}
+      </AnimatePresence>
     </main>
   )
 }

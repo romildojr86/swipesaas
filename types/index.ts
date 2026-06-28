@@ -5,6 +5,7 @@ export interface SaasEntry {
   modelo_preco: string
   pais_origen: string
   emoji: string
+  mrr: string
   print_url: string
   link_site: string
   link_anuncios: string
