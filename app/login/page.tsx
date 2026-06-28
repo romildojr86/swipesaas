@@ -2,26 +2,46 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const router = useRouter()
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    // TODO: connect Supabase auth
-    setTimeout(() => setLoading(false), 1000)
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError(
+        error.message === 'Invalid login credentials'
+          ? 'Correo o contraseña incorrectos.'
+          : error.message
+      )
+      setLoading(false)
+      return
+    }
+
+    router.push('/catalogo')
+    router.refresh()
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
-      {/* Background glow */}
       <div
         aria-hidden
         className="fixed inset-0 pointer-events-none"
@@ -36,7 +56,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
-        {/* Back link */}
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-text-secondary hover:text-white text-sm transition-colors mb-8"
@@ -45,9 +64,7 @@ export default function LoginPage() {
           Volver al inicio
         </Link>
 
-        {/* Card */}
         <div className="bg-[#111111] border border-white/5 rounded-2xl p-8">
-          {/* Logo */}
           <div className="flex items-center gap-2.5 mb-8">
             <div className="w-7 h-7 rounded-sm bg-gold-gradient flex items-center justify-center">
               <span className="text-[#0a0a0a] font-bold text-xs font-syne">S</span>

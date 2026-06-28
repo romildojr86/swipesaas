@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Check } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
 
 const benefits = [
   'Acceso gratuito a 10 SaaS del catálogo',
@@ -16,13 +18,42 @@ export default function CadastroPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const router = useRouter()
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    // TODO: connect Supabase auth
-    setTimeout(() => setLoading(false), 1000)
+
+    const { error: signUpError } = await supabase.auth.signUp({ email, password })
+
+    if (signUpError) {
+      setError(
+        signUpError.message === 'User already registered'
+          ? 'Este correo ya tiene una cuenta. Inicia sesión.'
+          : signUpError.message
+      )
+      setLoading(false)
+      return
+    }
+
+    // Sign in immediately — works when "Confirm email" is disabled in
+    // Supabase Dashboard → Authentication → Providers → Email.
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (signInError) {
+      setError('Cuenta creada. Confirma tu correo antes de iniciar sesión.')
+      setLoading(false)
+      return
+    }
+
+    router.push('/catalogo')
+    router.refresh()
   }
 
   return (
@@ -64,7 +95,6 @@ export default function CadastroPage() {
             Empieza gratis. Sin tarjeta de crédito.
           </p>
 
-          {/* Benefits */}
           <ul className="space-y-2 mb-7">
             {benefits.map((b) => (
               <li key={b} className="flex items-center gap-2.5 text-sm text-text-secondary">
