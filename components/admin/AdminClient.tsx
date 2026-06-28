@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, ExternalLink, Users, Database,
   TrendingUp, X, AlertTriangle, LogOut, Link as LinkIcon,
+  ChevronDown, Upload, ImageIcon,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
@@ -19,12 +20,49 @@ const NICHOS = [
 
 const MODELOS = ['Freemium', 'Suscripción', 'One-time', 'Comisión', 'Trial']
 
+const PAISES = [
+  { flag: '🇺🇸', name: 'Estados Unidos' },
+  { flag: '🇧🇷', name: 'Brasil' },
+  { flag: '🇲🇽', name: 'México' },
+  { flag: '🇦🇷', name: 'Argentina' },
+  { flag: '🇨🇴', name: 'Colombia' },
+  { flag: '🇨🇱', name: 'Chile' },
+  { flag: '🇵🇪', name: 'Perú' },
+  { flag: '🇪🇸', name: 'España' },
+  { flag: '🇬🇧', name: 'Reino Unido' },
+  { flag: '🇩🇪', name: 'Alemania' },
+  { flag: '🇫🇷', name: 'Francia' },
+  { flag: '🇨🇦', name: 'Canadá' },
+  { flag: '🇦🇺', name: 'Australia' },
+  { flag: '🇳🇱', name: 'Países Bajos' },
+  { flag: '🇸🇪', name: 'Suecia' },
+  { flag: '🇩🇰', name: 'Dinamarca' },
+  { flag: '🇫🇮', name: 'Finlandia' },
+  { flag: '🇳🇴', name: 'Noruega' },
+  { flag: '🇵🇹', name: 'Portugal' },
+  { flag: '🇮🇳', name: 'India' },
+  { flag: '🇯🇵', name: 'Japón' },
+  { flag: '🇰🇷', name: 'Corea del Sur' },
+  { flag: '🇧🇬', name: 'Bulgaria' },
+  { flag: '🇧🇪', name: 'Bélgica' },
+  { flag: '🇪🇪', name: 'Estonia' },
+  { flag: '🇺🇾', name: 'Uruguay' },
+  { flag: '🇪🇨', name: 'Ecuador' },
+  { flag: '🇵🇾', name: 'Paraguay' },
+  { flag: '🇧🇴', name: 'Bolivia' },
+  { flag: '🇻🇪', name: 'Venezuela' },
+  { flag: '🇵🇦', name: 'Panamá' },
+  { flag: '🇨🇷', name: 'Costa Rica' },
+  { flag: '🇬🇹', name: 'Guatemala' },
+  { flag: '🇩🇴', name: 'República Dominicana' },
+]
+
 const EMPTY_FORM = {
   nome: '',
   nicho: NICHOS[0],
   modelo_preco: MODELOS[0],
-  pais_origen: '',
-  emoji: '',
+  pais_origen: PAISES[0].name,
+  cover_url: '',
   mrr: '',
   precio: '',
   link_site: '',
@@ -47,7 +85,10 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const supabase = createBrowserClient(
@@ -58,6 +99,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
   const openAdd = () => {
     setEditingEntry(null)
     setForm(EMPTY_FORM)
+    setCoverPreview(null)
     setSaveError('')
     setModalOpen(true)
   }
@@ -69,18 +111,48 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
       nicho: entry.nicho,
       modelo_preco: entry.modelo_preco,
       pais_origen: entry.pais_origen,
-      emoji: entry.emoji ?? '',
+      cover_url: entry.cover_url ?? '',
       mrr: entry.mrr ?? '',
       precio: entry.precio ?? '',
       link_site: entry.link_site ?? '',
       link_anuncios: entry.link_anuncios ?? '',
     })
+    setCoverPreview(entry.cover_url || null)
     setSaveError('')
     setModalOpen(true)
   }
 
+  const handleCoverFile = async (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError('La imagen debe ser menor a 2MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (ev) => setCoverPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+
+    setUploading(true)
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${Date.now()}.${ext}`
+    const { data, error } = await supabase.storage
+      .from('saas-covers')
+      .upload(path, file, { contentType: file.type, upsert: false })
+
+    if (error) {
+      setSaveError(error.message)
+      setUploading(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('saas-covers').getPublicUrl(data.path)
+    setField('cover_url', publicUrl)
+    setUploading(false)
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (uploading) return
     setSaving(true)
     setSaveError('')
 
@@ -237,8 +309,12 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-md bg-[#161616] border border-white/5 flex items-center justify-center shrink-0 text-lg leading-none">
-                            {entry.emoji || entry.nome[0]}
+                          <div className="w-8 h-8 rounded-md bg-[#161616] border border-white/5 shrink-0 overflow-hidden flex items-center justify-center">
+                            {entry.cover_url ? (
+                              <img src={entry.cover_url} alt={entry.nome} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-lg leading-none">{entry.emoji || entry.nome[0]}</span>
+                            )}
                           </div>
                           <span className="text-white font-medium">{entry.nome}</span>
                         </div>
@@ -341,32 +417,64 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                   />
                 </div>
 
-                {/* Emoji + País side by side */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
-                      Emoji
-                    </label>
-                    <input
-                      type="text"
-                      value={form.emoji}
-                      onChange={(e) => setField('emoji', e.target.value)}
-                      placeholder="✍️"
-                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-xl placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
-                    />
+                {/* Imagen de portada */}
+                <div>
+                  <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                    Imagen de portada
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f) }}
+                  />
+                  <div
+                    onClick={() => !uploading && fileInputRef.current?.click()}
+                    className={`relative w-full h-[120px] rounded-lg border-2 border-dashed overflow-hidden transition-colors flex items-center justify-center bg-[#0a0a0a] ${uploading ? 'border-gold/30 cursor-wait' : 'border-white/10 hover:border-gold/30 cursor-pointer'}`}
+                  >
+                    {coverPreview ? (
+                      <>
+                        <img src={coverPreview} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="flex items-center gap-1.5 text-white text-xs font-medium bg-black/60 px-3 py-1.5 rounded-full">
+                            <Upload size={12} />
+                            Cambiar imagen
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-text-secondary pointer-events-none">
+                        <ImageIcon size={20} className="text-text-muted" />
+                        <span className="text-xs">Haz clic para subir imagen</span>
+                        <span className="text-[10px] text-text-muted">JPG, PNG, WebP · Máx 2MB</span>
+                      </div>
+                    )}
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
-                      País de origen
-                    </label>
-                    <input
-                      type="text"
+                </div>
+
+                {/* País de origen */}
+                <div>
+                  <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                    País de origen
+                  </label>
+                  <div className="relative">
+                    <select
                       value={form.pais_origen}
                       onChange={(e) => setField('pais_origen', e.target.value)}
                       required
-                      placeholder="Estados Unidos"
-                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
-                    />
+                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
+                    >
+                      {PAISES.map(({ flag, name }) => (
+                        <option key={name} value={name}>{flag} {name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   </div>
                 </div>
 
@@ -376,25 +484,31 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                     <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
                       Nicho
                     </label>
-                    <select
-                      value={form.nicho}
-                      onChange={(e) => setField('nicho', e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
-                    >
-                      {NICHOS.map((n) => <option key={n} value={n}>{n}</option>)}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={form.nicho}
+                        onChange={(e) => setField('nicho', e.target.value)}
+                        className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
+                      >
+                        {NICHOS.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      <ChevronDown size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
                       Modelo de precio
                     </label>
-                    <select
-                      value={form.modelo_preco}
-                      onChange={(e) => setField('modelo_preco', e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
-                    >
-                      {MODELOS.map((m) => <option key={m} value={m}>{m}</option>)}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={form.modelo_preco}
+                        onChange={(e) => setField('modelo_preco', e.target.value)}
+                        className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
+                      >
+                        {MODELOS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <ChevronDown size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    </div>
                   </div>
                 </div>
 
@@ -420,7 +534,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                       type="text"
                       value={form.precio}
                       onChange={(e) => setField('precio', e.target.value)}
-                      placeholder="ej: $29/mes, Gratis + $15/mo Pro"
+                      placeholder="ej: $29/mes"
                       className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
                     />
                   </div>
@@ -471,10 +585,10 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                   </button>
                   <button
                     type="submit"
-                    disabled={saving}
+                    disabled={saving || uploading}
                     className="flex-1 btn-gold py-2.5 rounded-lg text-[#0a0a0a] font-semibold text-sm disabled:opacity-60"
                   >
-                    {saving ? 'Guardando...' : editingEntry ? 'Guardar cambios' : 'Agregar SaaS'}
+                    {saving ? 'Guardando...' : uploading ? 'Subiendo...' : editingEntry ? 'Guardar cambios' : 'Agregar SaaS'}
                   </button>
                 </div>
               </form>

@@ -7,6 +7,7 @@ export interface SaasEntry {
   emoji: string
   mrr: string
   precio: string
+  cover_url: string
   print_url: string
   link_site: string
   link_anuncios: string

@@ -13,22 +13,40 @@ import type { SaasEntry } from '@/types'
 
 const flagMap: Record<string, string> = {
   'Estados Unidos': '🇺🇸',
-  Bulgaria: '🇧🇬',
-  'Bélgica': '🇧🇪',
-  'España': '🇪🇸',
-  Estonia: '🇪🇪',
-  Argentina: '🇦🇷',
   Brasil: '🇧🇷',
-  México: '🇲🇽',
+  'México': '🇲🇽',
+  Argentina: '🇦🇷',
   Colombia: '🇨🇴',
   Chile: '🇨🇱',
+  'Perú': '🇵🇪',
+  'España': '🇪🇸',
   'Reino Unido': '🇬🇧',
-  Canadá: '🇨🇦',
-  Australia: '🇦🇺',
   Alemania: '🇩🇪',
   Francia: '🇫🇷',
+  'Canadá': '🇨🇦',
+  Australia: '🇦🇺',
+  'Países Bajos': '🇳🇱',
   Holanda: '🇳🇱',
   Suecia: '🇸🇪',
+  Dinamarca: '🇩🇰',
+  Finlandia: '🇫🇮',
+  Noruega: '🇳🇴',
+  Portugal: '🇵🇹',
+  India: '🇮🇳',
+  'Japón': '🇯🇵',
+  'Corea del Sur': '🇰🇷',
+  Bulgaria: '🇧🇬',
+  'Bélgica': '🇧🇪',
+  Estonia: '🇪🇪',
+  Uruguay: '🇺🇾',
+  Ecuador: '🇪🇨',
+  Paraguay: '🇵🇾',
+  Bolivia: '🇧🇴',
+  Venezuela: '🇻🇪',
+  'Panamá': '🇵🇦',
+  'Costa Rica': '🇨🇷',
+  Guatemala: '🇬🇹',
+  'República Dominicana': '🇩🇴',
 }
 
 const nichoGlow: Record<string, string> = {
@@ -226,24 +244,34 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                   whileHover={{ y: -4 }}
                   className="group flex flex-col bg-[#111111] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(201,168,76,0.15)] hover:border-[rgba(201,168,76,0.38)]"
                 >
-                  {/* Top — emoji + glow + badge */}
+                  {/* Top — cover image OR emoji + glow + badge */}
                   <div
                     className="relative h-[180px] flex items-center justify-center overflow-hidden shrink-0"
                     style={{ background: '#161616' }}
                   >
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)`,
-                      }}
-                    />
+                    {entry.cover_url ? (
+                      <img
+                        src={entry.cover_url}
+                        alt={entry.nome}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)`,
+                          }}
+                        />
+                        <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>
+                          {emoji}
+                        </span>
+                      </>
+                    )}
                     <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-black/50 border border-gold/25 rounded-full px-2.5 py-1 backdrop-blur-sm">
                       <span className="text-[10px] leading-none">🚀</span>
                       <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
                     </div>
-                    <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>
-                      {emoji}
-                    </span>
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -314,11 +342,21 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                 style={{ boxShadow: '0 0 60px rgba(201,168,76,0.08), 0 24px 60px rgba(0,0,0,0.6)' }}
               >
                 {/* Subtle top glow line */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent z-10" />
+
+                {/* Cover banner (if exists) */}
+                {e.cover_url && (
+                  <div className="relative w-full h-[200px] overflow-hidden">
+                    <img src={e.cover_url} alt={e.nome} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#111111]/80 pointer-events-none" />
+                  </div>
+                )}
 
                 {/* Header */}
-                <div className="flex items-center gap-4 px-6 pt-6 pb-5">
-                  <span className="select-none shrink-0" style={{ fontSize: 48, lineHeight: 1 }}>{emoji}</span>
+                <div className="flex items-center gap-4 px-6 pt-5 pb-5">
+                  {!e.cover_url && (
+                    <span className="select-none shrink-0" style={{ fontSize: 48, lineHeight: 1 }}>{emoji}</span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h2 className="font-syne font-bold text-white text-2xl leading-tight truncate">
                       {e.nome}
