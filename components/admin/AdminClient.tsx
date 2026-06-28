@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
+import AnalyticsDashboard from './AnalyticsDashboard'
 
 const NICHOS = [
   'Productividad', 'Marketing', 'Finanzas', 'Educación', 'Salud',
@@ -86,9 +87,10 @@ interface Props {
   initialEntries: SaasEntry[]
   totalUsers: number
   premiumUsers: number
+  profileDates: string[]
 }
 
-export default function AdminClient({ initialEntries, totalUsers, premiumUsers }: Props) {
+export default function AdminClient({ initialEntries, totalUsers, premiumUsers, profileDates }: Props) {
   const [entries, setEntries] = useState(initialEntries)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<SaasEntry | null>(null)
@@ -403,6 +405,13 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
               </table>
             </div>
           </div>
+
+          <AnalyticsDashboard
+            entries={entries}
+            totalUsers={totalUsers}
+            premiumUsers={premiumUsers}
+            profileDates={profileDates}
+          />
         </motion.div>
       </div>
 
