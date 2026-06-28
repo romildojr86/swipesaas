@@ -4,6 +4,7 @@ export interface SaasEntry {
   nicho: string
   modelo_preco: string
   pais_origen: string
+  emoji: string
   print_url: string
   link_site: string
   link_anuncios: string

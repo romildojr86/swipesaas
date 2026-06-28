@@ -8,15 +8,6 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
 
-const emojiMap: Record<string, string> = {
-  'Notion AI Writer': '✍️',
-  Lemonsqueezy: '🍋',
-  Pocketbase: '🗄️',
-  'Tally Forms': '📋',
-  Typefully: '🐦',
-  Plausible: '📈',
-}
-
 const flagMap: Record<string, string> = {
   'Estados Unidos': '🇺🇸',
   Bulgaria: '🇧🇬',
@@ -135,7 +126,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((entry, i) => {
-              const emoji = emojiMap[entry.nome] ?? entry.nome[0]
+              const emoji = entry.emoji || entry.nome[0]
               const flag = flagMap[entry.pais_origen] ?? ''
               return (
                 <motion.div
