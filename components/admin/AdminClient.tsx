@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Trash2, Pencil, ExternalLink, Users, Database,
-  TrendingUp, X, AlertTriangle, LogOut, Link as LinkIcon,
-  ChevronDown, Upload, ImageIcon,
+  Plus, Trash2, Pencil, ExternalLink,
+  X, AlertTriangle, LogOut, Link as LinkIcon,
+  ChevronDown, Upload, ImageIcon, LayoutList, BarChart2,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
@@ -102,6 +102,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
+  const [activeTab, setActiveTab] = useState<'saas' | 'analytics'>('saas')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -250,12 +251,6 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
   const setField = (key: keyof FormData, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const stats = [
-    { label: 'SaaS en catálogo', value: entries.length.toString(), icon: <Database size={16} /> },
-    { label: 'Usuarios registrados', value: totalUsers.toString(), icon: <Users size={16} /> },
-    { label: 'Usuarios premium', value: premiumUsers.toString(), icon: <TrendingUp size={16} /> },
-  ]
-
   return (
     <main className="min-h-screen">
       {/* Header */}
@@ -272,13 +267,15 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
             <span className="text-gold text-sm font-medium">Admin</span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={openAdd}
-              className="btn-gold flex items-center gap-1.5 px-4 py-2 rounded-md text-[#0a0a0a] text-sm font-semibold"
-            >
-              <Plus size={14} />
-              Nuevo SaaS
-            </button>
+            {activeTab === 'saas' && (
+              <button
+                onClick={openAdd}
+                className="btn-gold flex items-center gap-1.5 px-4 py-2 rounded-md text-[#0a0a0a] text-sm font-semibold"
+              >
+                <Plus size={14} />
+                Nuevo SaaS
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="text-text-secondary hover:text-white transition-colors p-1.5"
@@ -296,122 +293,136 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h1 className="font-syne font-semibold text-white text-4xl mb-1">Panel Admin</h1>
-          <p className="text-text-secondary text-sm mb-8">Gestión de contenido y usuarios.</p>
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h1 className="font-syne font-semibold text-white text-4xl mb-1">Panel Admin</h1>
+              <p className="text-text-secondary text-sm">Gestión de contenido y usuarios.</p>
+            </div>
+          </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-[#111111] border border-white/5 rounded-xl p-5 flex items-center gap-4"
+          {/* Tab navigation */}
+          <div className="flex items-center gap-0 border-b border-white/5 mb-6">
+            {([
+              { key: 'saas', label: 'SaaS', icon: <LayoutList size={14} /> },
+              { key: 'analytics', label: 'Analytics', icon: <BarChart2 size={14} /> },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-all duration-200 -mb-px ${
+                  activeTab === tab.key
+                    ? 'text-white border-gold'
+                    : 'text-text-secondary border-transparent hover:text-white/70'
+                }`}
               >
-                <div className="w-9 h-9 rounded-lg bg-gold/8 border border-gold/15 flex items-center justify-center text-gold shrink-0">
-                  {stat.icon}
-                </div>
-                <div>
-                  <p className="text-white font-syne font-semibold text-2xl">{stat.value}</p>
-                  <p className="text-text-secondary text-xs">{stat.label}</p>
-                </div>
-              </div>
+                <span className={activeTab === tab.key ? 'text-gold' : 'text-text-muted'}>
+                  {tab.icon}
+                </span>
+                {tab.label}
+              </button>
             ))}
           </div>
 
-          {/* Table */}
-          <div className="bg-[#111111] border border-white/5 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-              <h2 className="text-white font-medium text-sm">Entradas del catálogo</h2>
-              <span className="text-text-secondary text-xs">{entries.length} entradas</span>
-            </div>
+          {/* Tab: SaaS */}
+          {activeTab === 'saas' && (
+            <div className="bg-[#111111] border border-white/5 rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                <h2 className="text-white font-medium text-sm">Entradas del catálogo</h2>
+                <span className="text-text-secondary text-xs">{entries.length} entradas</span>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/5">
-                    {['Nombre', 'Nicho', 'Modelo de precio', 'País', 'Acciones'].map((col) => (
-                      <th
-                        key={col}
-                        className="text-left px-6 py-3 text-xs text-text-secondary uppercase tracking-wider font-normal"
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      {['Nombre', 'Nicho', 'Modelo de precio', 'País', 'Acciones'].map((col) => (
+                        <th
+                          key={col}
+                          className="text-left px-6 py-3 text-xs text-text-secondary uppercase tracking-wider font-normal"
+                        >
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-text-secondary text-sm">
+                          No hay entradas aún. Agrega el primer SaaS.
+                        </td>
+                      </tr>
+                    )}
+                    {entries.map((entry) => (
+                      <tr
+                        key={entry.id}
+                        className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
                       >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-text-secondary text-sm">
-                        No hay entradas aún. Agrega el primer SaaS.
-                      </td>
-                    </tr>
-                  )}
-                  {entries.map((entry) => (
-                    <tr
-                      key={entry.id}
-                      className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-md bg-[#161616] border border-white/5 shrink-0 overflow-hidden flex items-center justify-center">
-                            {entry.cover_url ? (
-                              <img src={entry.cover_url} alt={entry.nome} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-lg leading-none">{entry.emoji || entry.nome[0]}</span>
-                            )}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-md bg-[#161616] border border-white/5 shrink-0 overflow-hidden flex items-center justify-center">
+                              {entry.cover_url ? (
+                                <img src={entry.cover_url} alt={entry.nome} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-lg leading-none">{entry.emoji || entry.nome[0]}</span>
+                              )}
+                            </div>
+                            <span className="text-white font-medium">{entry.nome}</span>
                           </div>
-                          <span className="text-white font-medium">{entry.nome}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-gold/80 px-2 py-0.5 bg-gold/8 border border-gold/12 rounded-full">
-                          {entry.nicho}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-text-secondary">{entry.modelo_preco}</td>
-                      <td className="px-6 py-4 text-text-secondary">{entry.pais_origen}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          {entry.link_site && (
-                            <a
-                              href={entry.link_site}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-text-secondary hover:text-white transition-colors p-1.5 rounded hover:bg-white/5"
-                              title="Abrir sitio"
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs text-gold/80 px-2 py-0.5 bg-gold/8 border border-gold/12 rounded-full">
+                            {entry.nicho}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">{entry.modelo_preco}</td>
+                        <td className="px-6 py-4 text-text-secondary">{entry.pais_origen}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            {entry.link_site && (
+                              <a
+                                href={entry.link_site}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-text-secondary hover:text-white transition-colors p-1.5 rounded hover:bg-white/5"
+                                title="Abrir sitio"
+                              >
+                                <ExternalLink size={13} />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openEdit(entry)}
+                              className="text-text-secondary hover:text-gold transition-colors p-1.5 rounded hover:bg-gold/5"
+                              title="Editar"
                             >
-                              <ExternalLink size={13} />
-                            </a>
-                          )}
-                          <button
-                            onClick={() => openEdit(entry)}
-                            className="text-text-secondary hover:text-gold transition-colors p-1.5 rounded hover:bg-gold/5"
-                            title="Editar"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(entry.id)}
-                            className="text-text-secondary hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-500/5"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(entry.id)}
+                              className="text-text-secondary hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-500/5"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
 
-          <AnalyticsDashboard
-            entries={entries}
-            totalUsers={totalUsers}
-            premiumUsers={premiumUsers}
-            profileDates={profileDates}
-          />
+          {/* Tab: Analytics */}
+          {activeTab === 'analytics' && (
+            <AnalyticsDashboard
+              entries={entries}
+              totalUsers={totalUsers}
+              premiumUsers={premiumUsers}
+              profileDates={profileDates}
+            />
+          )}
         </motion.div>
       </div>
 
