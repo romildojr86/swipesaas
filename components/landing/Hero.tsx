@@ -73,7 +73,7 @@ const fadeUp = {
 
 export default function Hero() {
   return (
-    <section className="relative flex flex-col items-center justify-center px-6 pt-28 pb-0 overflow-hidden">
+    <section className="relative flex flex-col items-center justify-center px-6 pt-16 md:pt-28 pb-0 overflow-hidden">
       {/* Radial glow */}
       <div
         aria-hidden
@@ -125,13 +125,13 @@ export default function Hero() {
         <motion.h1
           variants={fadeUp}
           className="font-syne font-extrabold leading-[0.95] tracking-tight mb-6"
-          style={{ fontSize: 'clamp(3.5rem, 8vw, 6rem)' }}
+          style={{ fontSize: 'clamp(2rem, 8vw, 6rem)' }}
         >
           <span className="block text-white/90">Los SaaS que están</span>
           <span className="block">
             <span
               className="text-gold-gradient-animate font-syne font-extrabold inline-block"
-              style={{ fontSize: '1.05em', fontStyle: 'italic', transform: 'skewX(-6deg)' }}
+              style={{ fontSize: '1em', fontStyle: 'italic', transform: 'skewX(-6deg)' }}
             >
               escalando
             </span>
@@ -151,18 +151,18 @@ export default function Hero() {
         {/* CTAs */}
         <motion.div
           variants={fadeUp}
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12"
+          className="flex flex-row items-center justify-center gap-3 mb-12"
         >
           <Link
             href="/catalogo"
-            className="btn-gold flex items-center gap-2 px-7 py-3.5 rounded-md text-[#0a0a0a] text-sm font-semibold"
+            className="btn-gold flex items-center justify-center gap-2 px-5 py-3 md:px-7 md:py-3.5 rounded-md text-[#0a0a0a] text-sm font-semibold flex-1 sm:flex-none"
           >
             Explorar el catálogo
             <ArrowRight size={15} />
           </Link>
           <Link
             href="#precios"
-            className="btn-outline flex items-center gap-2 px-7 py-3.5 rounded-md text-sm font-medium"
+            className="btn-outline flex items-center justify-center gap-2 px-5 py-3 md:px-7 md:py-3.5 rounded-md text-sm font-medium flex-1 sm:flex-none"
           >
             Ver planes
           </Link>
