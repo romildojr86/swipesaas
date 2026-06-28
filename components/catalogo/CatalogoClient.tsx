@@ -336,46 +336,60 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                 {/* Divider */}
                 <div className="h-px bg-white/5 mx-6" />
 
-                {/* Metrics 2x2 */}
-                <div className="grid grid-cols-2 gap-3 px-6 py-5">
-                  {/* MRR */}
-                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                      <span>💰</span> MRR Estimado
-                    </p>
-                    <p className="text-gold font-syne font-bold text-xl leading-none">
-                      {e.mrr || '—'}
-                    </p>
+                {/* Metrics: top row 3-col, bottom row 2-col */}
+                <div className="px-6 py-5 space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* MRR */}
+                    <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                        <span>💰</span> MRR
+                      </p>
+                      <p className="text-gold font-syne font-bold text-lg leading-none">
+                        {e.mrr || '—'}
+                      </p>
+                    </div>
+
+                    {/* Precio */}
+                    <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                        <span>💵</span> Precio
+                      </p>
+                      <p className="text-white font-semibold text-sm leading-snug">
+                        {e.precio || '—'}
+                      </p>
+                    </div>
+
+                    {/* Modelo */}
+                    <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                        <span>📊</span> Modelo
+                      </p>
+                      <p className="text-white font-semibold text-sm leading-none">
+                        {e.modelo_preco}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Modelo */}
-                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                      <span>📊</span> Modelo
-                    </p>
-                    <p className="text-white font-semibold text-base leading-none">
-                      {e.modelo_preco}
-                    </p>
-                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Nicho */}
+                    <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                        <span>🎯</span> Nicho
+                      </p>
+                      <p className="text-gold font-semibold text-base leading-none">
+                        {e.nicho}
+                      </p>
+                    </div>
 
-                  {/* Nicho */}
-                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                      <span>🎯</span> Nicho
-                    </p>
-                    <p className="text-gold font-semibold text-base leading-none">
-                      {e.nicho}
-                    </p>
-                  </div>
-
-                  {/* País */}
-                  <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                    <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                      <span>🌍</span> País
-                    </p>
-                    <p className="text-white font-semibold text-base leading-none">
-                      {flag} {e.pais_origen}
-                    </p>
+                    {/* País */}
+                    <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
+                        <span>🌍</span> País
+                      </p>
+                      <p className="text-white font-semibold text-base leading-none">
+                        {flag} {e.pais_origen}
+                      </p>
+                    </div>
                   </div>
                 </div>
 

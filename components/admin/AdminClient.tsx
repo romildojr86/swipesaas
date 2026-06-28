@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   pais_origen: '',
   emoji: '',
   mrr: '',
+  precio: '',
   link_site: '',
   link_anuncios: '',
 }
@@ -70,6 +71,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
       pais_origen: entry.pais_origen,
       emoji: entry.emoji ?? '',
       mrr: entry.mrr ?? '',
+      precio: entry.precio ?? '',
       link_site: entry.link_site ?? '',
       link_anuncios: entry.link_anuncios ?? '',
     })
@@ -396,18 +398,32 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                   </div>
                 </div>
 
-                {/* MRR Estimado */}
-                <div>
-                  <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
-                    MRR Estimado
-                  </label>
-                  <input
-                    type="text"
-                    value={form.mrr}
-                    onChange={(e) => setField('mrr', e.target.value)}
-                    placeholder="ej: $42K+"
-                    className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
-                  />
+                {/* MRR + Precio side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                      MRR Estimado
+                    </label>
+                    <input
+                      type="text"
+                      value={form.mrr}
+                      onChange={(e) => setField('mrr', e.target.value)}
+                      placeholder="ej: $42K+"
+                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                      Precio
+                    </label>
+                    <input
+                      type="text"
+                      value={form.precio}
+                      onChange={(e) => setField('precio', e.target.value)}
+                      placeholder="ej: $29/mes, Gratis + $15/mo Pro"
+                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
+                    />
+                  </div>
                 </div>
 
                 {/* Link del sitio */}
