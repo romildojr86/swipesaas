@@ -57,6 +57,16 @@ const PAISES = [
   { flag: '🇩🇴', name: 'República Dominicana' },
 ]
 
+const MONEDAS = [
+  { flag: '🇺🇸', code: 'USD', label: 'Dólar' },
+  { flag: '🇧🇷', code: 'BRL', label: 'Real' },
+  { flag: '🇪🇺', code: 'EUR', label: 'Euro' },
+  { flag: '🇲🇽', code: 'MXN', label: 'Peso Mexicano' },
+  { flag: '🇦🇷', code: 'ARS', label: 'Peso Argentino' },
+  { flag: '🇨🇴', code: 'COP', label: 'Peso Colombiano' },
+  { flag: '🇨🇱', code: 'CLP', label: 'Peso Chileno' },
+]
+
 const EMPTY_FORM = {
   nome: '',
   nicho: NICHOS[0],
@@ -65,6 +75,7 @@ const EMPTY_FORM = {
   cover_url: '',
   mrr: '',
   precio: '',
+  moneda: 'USD',
   link_site: '',
   link_anuncios: '',
 }
@@ -87,6 +98,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
   const [deleting, setDeleting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -100,6 +112,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
     setEditingEntry(null)
     setForm(EMPTY_FORM)
     setCoverPreview(null)
+    setUploadedUrl(null)
     setSaveError('')
     setModalOpen(true)
   }
@@ -114,39 +127,54 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
       cover_url: entry.cover_url ?? '',
       mrr: entry.mrr ?? '',
       precio: entry.precio ?? '',
+      moneda: entry.moneda || 'USD',
       link_site: entry.link_site ?? '',
       link_anuncios: entry.link_anuncios ?? '',
     })
-    setCoverPreview(entry.cover_url || null)
+    const existingCover = entry.cover_url || null
+    setCoverPreview(existingCover)
+    setUploadedUrl(existingCover)
     setSaveError('')
     setModalOpen(true)
   }
 
   const handleCoverFile = async (file: File) => {
+    setSaveError('')
+
     if (file.size > 2 * 1024 * 1024) {
       setSaveError('La imagen debe ser menor a 2MB.')
       return
     }
 
+    // Show local preview immediately
     const reader = new FileReader()
     reader.onload = (ev) => setCoverPreview(ev.target?.result as string)
     reader.readAsDataURL(file)
 
     setUploading(true)
-    const ext = file.name.split('.').pop() ?? 'jpg'
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
     const path = `${Date.now()}.${ext}`
+
+    console.log('[cover-upload] uploading to saas-covers/', path)
+
     const { data, error } = await supabase.storage
       .from('saas-covers')
       .upload(path, file, { contentType: file.type, upsert: false })
 
     if (error) {
-      setSaveError(error.message)
+      console.error('[cover-upload] storage error:', error)
+      setSaveError(`Error al subir imagen: ${error.message}`)
       setUploading(false)
       return
     }
 
-    const { data: { publicUrl } } = supabase.storage.from('saas-covers').getPublicUrl(data.path)
+    const { data: urlData } = supabase.storage.from('saas-covers').getPublicUrl(data.path)
+    const publicUrl = urlData.publicUrl
+
+    console.log('[cover-upload] public URL:', publicUrl)
+
     setField('cover_url', publicUrl)
+    setUploadedUrl(publicUrl)
     setUploading(false)
   }
 
@@ -156,6 +184,8 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
     setSaving(true)
     setSaveError('')
 
+    console.log('[save] form payload:', form)
+
     if (editingEntry) {
       const { data, error } = await supabase
         .from('saas_entries')
@@ -164,7 +194,13 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
         .select()
         .single()
 
-      if (error) { setSaveError(error.message); setSaving(false); return }
+      if (error) {
+        console.error('[save] update error:', error)
+        setSaveError(error.message)
+        setSaving(false)
+        return
+      }
+      console.log('[save] updated entry:', data)
       setEntries((prev) => prev.map((e) => e.id === editingEntry.id ? data as SaasEntry : e))
     } else {
       const { data, error } = await supabase
@@ -173,7 +209,13 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
         .select()
         .single()
 
-      if (error) { setSaveError(error.message); setSaving(false); return }
+      if (error) {
+        console.error('[save] insert error:', error)
+        setSaveError(error.message)
+        setSaving(false)
+        return
+      }
+      console.log('[save] inserted entry:', data)
       setEntries((prev) => [data as SaasEntry, ...prev])
     }
 
@@ -456,6 +498,11 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                       </div>
                     )}
                   </div>
+                  {uploadedUrl && !uploading && (
+                    <p className="mt-1.5 text-[10px] text-green-400/70 truncate">
+                      ✓ Imagen subida correctamente
+                    </p>
+                  )}
                 </div>
 
                 {/* País de origen */}
@@ -512,20 +559,22 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                   </div>
                 </div>
 
-                {/* MRR + Precio side by side */}
+                {/* MRR */}
+                <div>
+                  <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                    MRR Estimado
+                  </label>
+                  <input
+                    type="text"
+                    value={form.mrr}
+                    onChange={(e) => setField('mrr', e.target.value)}
+                    placeholder="ej: $42K+"
+                    className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
+                  />
+                </div>
+
+                {/* Precio + Moneda side by side */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
-                      MRR Estimado
-                    </label>
-                    <input
-                      type="text"
-                      value={form.mrr}
-                      onChange={(e) => setField('mrr', e.target.value)}
-                      placeholder="ej: $42K+"
-                      className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
-                    />
-                  </div>
                   <div>
                     <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
                       Precio
@@ -534,9 +583,26 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                       type="text"
                       value={form.precio}
                       onChange={(e) => setField('precio', e.target.value)}
-                      placeholder="ej: $29/mes"
+                      placeholder="ej: 29/mes"
                       className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
                     />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                      Moneda
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={form.moneda}
+                        onChange={(e) => setField('moneda', e.target.value)}
+                        className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
+                      >
+                        {MONEDAS.map(({ flag, code, label }) => (
+                          <option key={code} value={code}>{flag} {code} — {label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    </div>
                   </div>
                 </div>
 
@@ -588,7 +654,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers }
                     disabled={saving || uploading}
                     className="flex-1 btn-gold py-2.5 rounded-lg text-[#0a0a0a] font-semibold text-sm disabled:opacity-60"
                   >
-                    {saving ? 'Guardando...' : uploading ? 'Subiendo...' : editingEntry ? 'Guardar cambios' : 'Agregar SaaS'}
+                    {saving ? 'Guardando...' : uploading ? 'Subiendo imagen...' : editingEntry ? 'Guardar cambios' : 'Agregar SaaS'}
                   </button>
                 </div>
               </form>

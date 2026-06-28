@@ -49,6 +49,16 @@ const flagMap: Record<string, string> = {
   'República Dominicana': '🇩🇴',
 }
 
+const monedaSymbol: Record<string, string> = {
+  USD: '$',
+  BRL: 'R$',
+  EUR: '€',
+  MXN: 'MX$',
+  ARS: 'AR$',
+  COP: 'COP$',
+  CLP: 'CLP$',
+}
+
 const nichoGlow: Record<string, string> = {
   Productividad: 'rgba(139,92,246,0.14)',
   Marketing: 'rgba(234,88,12,0.14)',
@@ -299,6 +309,14 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                         <p className="text-[11px] text-gold/80 font-medium truncate">{entry.nicho}</p>
                       </div>
                     </div>
+                    {entry.precio && (
+                      <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
+                        <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Precio</p>
+                        <p className="text-[11px] text-white font-semibold truncate">
+                          {monedaSymbol[entry.moneda] ?? ''}{entry.precio}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Single CTA */}
                     <button
@@ -393,7 +411,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                         <span>💵</span> Precio
                       </p>
                       <p className="text-white font-semibold text-sm leading-snug">
-                        {e.precio || '—'}
+                        {e.precio ? `${monedaSymbol[e.moneda] ?? ''}${e.precio}` : '—'}
                       </p>
                     </div>
 
