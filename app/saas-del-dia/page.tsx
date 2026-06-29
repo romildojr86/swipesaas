@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Lock, ExternalLink, Megaphone, BarChart2, Star } from 'lucide-react'
+import { Lock, ExternalLink, Megaphone, Star } from 'lucide-react'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { SaasEntry } from '@/types'
@@ -22,8 +22,9 @@ async function getPageData() {
     { cookies: { getAll: () => cookieStore.getAll() } }
   )
 
-  const [{ data: featured }, { data: { user } }] = await Promise.all([
+  const [{ data: featured }, { count: totalCount }, { data: { user } }] = await Promise.all([
     supabase.from('saas_entries').select('*').eq('is_featured', true).maybeSingle(),
+    supabase.from('saas_entries').select('*', { count: 'exact', head: true }),
     supabase.auth.getUser(),
   ])
 
@@ -37,11 +38,11 @@ async function getPageData() {
     isPremium = profile?.is_premium || profile?.is_admin || false
   }
 
-  return { entry: featured as SaasEntry | null, isPremium }
+  return { entry: featured as SaasEntry | null, isPremium, totalCount: totalCount ?? 0 }
 }
 
 export default async function SaasDelDiaPage() {
-  const { entry, isPremium } = await getPageData()
+  const { entry, isPremium, totalCount } = await getPageData()
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-12">
@@ -175,8 +176,8 @@ export default async function SaasDelDiaPage() {
                   ))}
                 </div>
 
-                {/* Action buttons */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Action buttons — Ver sitio + Ver anuncios */}
+                <div className="grid grid-cols-2 gap-2">
                   {/* Ver sitio */}
                   {entry.link_site ? (
                     <a
@@ -215,64 +216,41 @@ export default async function SaasDelDiaPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Ver análisis */}
-                  {isPremium ? (
-                    <Link
-                      href="/catalogo"
-                      className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl btn-gold text-[#0a0a0a]"
-                    >
-                      <BarChart2 size={15} />
-                      <span className="text-[10px] leading-none font-semibold">Ver análisis</span>
-                    </Link>
-                  ) : (
-                    <a
-                      href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl btn-gold text-[#0a0a0a]"
-                    >
-                      <BarChart2 size={15} />
-                      <span className="text-[10px] leading-none font-semibold">Ver análisis</span>
-                    </a>
-                  )}
                 </div>
               </div>
             </div>
 
-            {/* ── Upgrade block (non-premium only) ── */}
-            {!isPremium && (
-              <div
-                className="mt-4 rounded-2xl p-6"
-                style={{
-                  background: '#0f0e09',
-                  border: '1px solid rgba(201,168,76,0.25)',
-                }}
+            {/* ── Upgrade block (always visible) ── */}
+            <div
+              className="mt-4 rounded-2xl p-6 text-center"
+              style={{
+                background: '#0f0e09',
+                border: '1px solid rgba(201,168,76,0.25)',
+                boxShadow: '0 0 40px rgba(201,168,76,0.05)',
+              }}
+            >
+              <p className="font-syne font-semibold text-white text-base mb-2 leading-snug">
+                ¿Quieres acceso a más de {totalCount}+ SaaS escalados?
+              </p>
+              <p className="text-text-secondary text-sm mb-5 leading-relaxed">
+                Accede al catálogo completo — mecanismo, precio, MRR y anuncios de cada SaaS.
+              </p>
+              <a
+                href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[#0a0a0a] font-semibold text-sm"
               >
-                <p className="font-syne font-semibold text-white text-base mb-1 leading-snug">
-                  ¿Quieres acceso a más de 200 SaaS escalados?
-                </p>
-                <p className="text-text-secondary text-sm mb-5 leading-relaxed">
-                  Accede al catálogo completo con análisis detallados, MRR real, estrategias de precio y biblioteca de anuncios.
-                </p>
-                <a
-                  href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-gold flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[#0a0a0a] font-semibold text-sm"
-                >
-                  <Star size={13} className="fill-[#0a0a0a]" />
-                  Quiero acceso premium →
-                </a>
-
-                <p className="text-center text-xs text-text-muted mt-4">
-                  ¿Ya eres premium?{' '}
-                  <Link href="/login" className="text-gold hover:text-gold-light transition-colors">
-                    Inicia sesión →
-                  </Link>
-                </p>
-              </div>
-            )}
+                <Star size={13} className="fill-[#0a0a0a]" />
+                Quiero acceso premium →
+              </a>
+              <p className="text-xs text-text-muted mt-4">
+                ¿Ya eres premium?{' '}
+                <Link href="/login" className="text-gold hover:text-gold-light transition-colors">
+                  Inicia sesión →
+                </Link>
+              </p>
+            </div>
           </>
         )}
       </div>
