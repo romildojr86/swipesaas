@@ -79,7 +79,7 @@ export default function Pricing() {
 
           {/* CTA */}
           <a
-            href="https://pay.hotmart.com/XXXXX"
+            href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-gold block text-center py-4 rounded-md text-[#0a0a0a] font-semibold text-sm"

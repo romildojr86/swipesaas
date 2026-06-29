@@ -46,7 +46,7 @@ export default function CtaBanner() {
               más inteligentes y lanzar más rápido.
             </p>
             <a
-              href="https://pay.hotmart.com/XXXXX"
+              href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold inline-flex items-center gap-2 px-8 py-4 rounded-md text-[#0a0a0a] font-semibold text-base"
