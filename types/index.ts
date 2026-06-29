@@ -12,6 +12,7 @@ export interface SaasEntry {
   print_url: string
   link_site: string
   link_anuncios: string
+  is_featured: boolean
   created_at: string
 }
 

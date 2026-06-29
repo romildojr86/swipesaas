@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, ExternalLink,
   X, AlertTriangle, LogOut, Link as LinkIcon,
-  ChevronDown, Upload, ImageIcon, LayoutList, BarChart2, Users,
+  ChevronDown, Upload, ImageIcon, LayoutList, BarChart2, Users, Star,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry } from '@/types'
@@ -250,6 +250,20 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
     router.refresh()
   }
 
+  const toggleFeatured = async (entry: SaasEntry) => {
+    if (entry.is_featured) return
+    await supabase.from('saas_entries').update({ is_featured: false }).eq('is_featured', true)
+    const { error } = await supabase
+      .from('saas_entries')
+      .update({ is_featured: true })
+      .eq('id', entry.id)
+    if (!error) {
+      setEntries((prev) =>
+        prev.map((e) => ({ ...e, is_featured: e.id === entry.id }))
+      )
+    }
+  }
+
   const setField = (key: keyof FormData, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
@@ -370,7 +384,15 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
                                 <span className="text-lg leading-none">{entry.emoji || entry.nome[0]}</span>
                               )}
                             </div>
-                            <span className="text-white font-medium">{entry.nome}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{entry.nome}</span>
+                              {entry.is_featured && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-gold bg-gold/10 border border-gold/20 px-1.5 py-0.5 rounded-full">
+                                  <Star size={9} className="fill-gold" />
+                                  Destacado
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -382,6 +404,19 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
                         <td className="px-6 py-4 text-text-secondary">{entry.pais_origen}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleFeatured(entry)}
+                              disabled={entry.is_featured}
+                              title={entry.is_featured ? 'SaaS del Día actual' : 'Destacar como SaaS del Día'}
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                entry.is_featured
+                                  ? 'text-gold bg-gold/10 border border-gold/20 cursor-default'
+                                  : 'text-text-secondary border border-white/8 hover:text-gold hover:border-gold/30 hover:bg-gold/5'
+                              }`}
+                            >
+                              <Star size={10} className={entry.is_featured ? 'fill-gold' : ''} />
+                              {entry.is_featured ? 'Destacado' : 'Destacar'}
+                            </button>
                             {entry.link_site && (
                               <a
                                 href={entry.link_site}

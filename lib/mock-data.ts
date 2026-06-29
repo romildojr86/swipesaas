@@ -16,6 +16,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://notion.so',
     link_anuncios: '#',
     created_at: '2024-01-10T00:00:00Z',
+    is_featured: false,
   },
   {
     id: '2',
@@ -32,6 +33,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://lemonsqueezy.com',
     link_anuncios: '#',
     created_at: '2024-01-15T00:00:00Z',
+    is_featured: false,
   },
   {
     id: '3',
@@ -48,6 +50,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://pocketbase.io',
     link_anuncios: '#',
     created_at: '2024-01-20T00:00:00Z',
+    is_featured: false,
   },
   {
     id: '4',
@@ -64,6 +67,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://tally.so',
     link_anuncios: '#',
     created_at: '2024-02-01T00:00:00Z',
+    is_featured: false,
   },
   {
     id: '5',
@@ -80,6 +84,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://typefully.com',
     link_anuncios: '#',
     created_at: '2024-02-10T00:00:00Z',
+    is_featured: false,
   },
   {
     id: '6',
@@ -96,6 +101,7 @@ export const mockSaasEntries: SaasEntry[] = [
     link_site: 'https://plausible.io',
     link_anuncios: '#',
     created_at: '2024-02-15T00:00:00Z',
+    is_featured: false,
   },
 ]
 
