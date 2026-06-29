@@ -59,7 +59,7 @@ export default function Pricing() {
               className="font-syne font-bold text-white"
               style={{ fontSize: '3rem', lineHeight: 1 }}
             >
-              $27 USD
+              $19 USD
             </span>
           </div>
           <p className="text-gold text-sm font-sans mb-7">pago único</p>
