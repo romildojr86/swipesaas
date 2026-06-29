@@ -60,12 +60,6 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/login"
-            className="text-sm text-text-secondary hover:text-white transition-colors duration-200 px-4 py-2"
-          >
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/cadastro"
             className="btn-gold text-sm px-5 py-2 rounded-md text-[#0a0a0a]"
           >
             Acceder →
@@ -103,10 +97,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 pt-2">
-                <Link href="/login" className="btn-outline text-center py-2.5 rounded-md text-sm">
-                  Iniciar sesión
-                </Link>
-                <Link href="/cadastro" className="btn-gold text-center py-2.5 rounded-md text-sm">
+                <Link href="/login" className="btn-gold text-center py-2.5 rounded-md text-sm">
                   Acceder →
                 </Link>
               </div>

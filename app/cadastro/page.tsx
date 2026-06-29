@@ -1,21 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Check } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 
-const benefits = [
-  'Acceso gratuito a 10 SaaS del catálogo',
-  'Filtra por nicho y país',
-  'Upgrade a Premium en cualquier momento',
-]
+function CadastroForm() {
+  const searchParams = useSearchParams()
+  const emailFromUrl = searchParams.get('email') ?? ''
 
-export default function CadastroPage() {
-  const [email, setEmail] = useState('')
+  const [nome, setNome] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -25,12 +23,32 @@ export default function CadastroPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  useEffect(() => {
+    if (!emailFromUrl) {
+      router.replace('/verificar')
+    }
+  }, [emailFromUrl, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
 
-    const { error: signUpError } = await supabase.auth.signUp({ email, password })
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.')
+      return
+    }
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+
+    setLoading(true)
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: emailFromUrl,
+      password,
+      options: { data: { full_name: nome } },
+    })
 
     if (signUpError) {
       setError(
@@ -42,15 +60,21 @@ export default function CadastroPage() {
       return
     }
 
-    // Sign in immediately — works when "Confirm email" is disabled in
-    // Supabase Dashboard → Authentication → Providers → Email.
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailFromUrl,
+      password,
+    })
 
-    if (signInError) {
+    if (signInError || !signInData.user) {
       setError('Cuenta creada. Confirma tu correo antes de iniciar sesión.')
       setLoading(false)
       return
     }
+
+    await supabase
+      .from('profiles')
+      .update({ is_premium: true })
+      .eq('id', signInData.user.id)
 
     router.push('/catalogo')
     router.refresh()
@@ -62,7 +86,8 @@ export default function CadastroPage() {
         aria-hidden
         className="fixed inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%)',
         }}
       />
 
@@ -73,14 +98,15 @@ export default function CadastroPage() {
         className="w-full max-w-md"
       >
         <Link
-          href="/"
+          href="/verificar"
           className="inline-flex items-center gap-2 text-text-secondary hover:text-white text-sm transition-colors mb-8"
         >
           <ArrowLeft size={14} />
-          Volver al inicio
+          Volver
         </Link>
 
         <div className="bg-[#111111] border border-white/5 rounded-2xl p-8">
+          {/* Logo */}
           <div className="flex items-center gap-2.5 mb-8">
             <div className="w-7 h-7 rounded-sm bg-gold-gradient flex items-center justify-center">
               <span className="text-[#0a0a0a] font-bold text-xs font-syne">S</span>
@@ -88,23 +114,12 @@ export default function CadastroPage() {
             <span className="font-syne font-semibold text-lg text-white">SwipeSaaS</span>
           </div>
 
-          <h1 className="font-syne font-semibold text-white text-3xl mb-1">
+          <h1 className="font-syne font-semibold text-white text-3xl mb-2">
             Crea tu cuenta
           </h1>
-          <p className="text-text-secondary text-sm mb-6">
-            Empieza gratis. Sin tarjeta de crédito.
+          <p className="text-text-secondary text-sm mb-7 leading-relaxed">
+            Tu compra fue verificada. Ahora crea tu acceso.
           </p>
-
-          <ul className="space-y-2 mb-7">
-            {benefits.map((b) => (
-              <li key={b} className="flex items-center gap-2.5 text-sm text-text-secondary">
-                <Check size={13} className="text-gold shrink-0" />
-                {b}
-              </li>
-            ))}
-          </ul>
-
-          <div className="h-px bg-white/5 mb-7" />
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">
@@ -113,19 +128,39 @@ export default function CadastroPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email — locked */}
             <div>
               <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
-                Correo electrónico
+                Email
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={emailFromUrl}
+                  readOnly
+                  className="w-full bg-[#0a0a0a]/50 border border-white/5 rounded-lg px-4 py-3 text-text-secondary text-sm pr-10 cursor-not-allowed"
+                />
+                <Lock size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              </div>
+            </div>
+
+            {/* Nome */}
+            <div>
+              <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                Nombre
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
                 required
+                autoFocus
+                placeholder="Tu nombre"
                 className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
-                placeholder="tu@email.com"
               />
             </div>
+
+            {/* Senha */}
             <div>
               <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
                 Contraseña
@@ -136,8 +171,24 @@ export default function CadastroPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
                 placeholder="Mínimo 6 caracteres"
+                className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
+              />
+            </div>
+
+            {/* Confirmar senha */}
+            <div>
+              <label className="text-xs text-text-secondary uppercase tracking-wider block mb-1.5">
+                Confirmar contraseña
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Repite tu contraseña"
+                className="w-full bg-[#0a0a0a] border border-white/8 rounded-lg px-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
               />
             </div>
 
@@ -146,7 +197,7 @@ export default function CadastroPage() {
               disabled={loading}
               className="btn-gold w-full py-3.5 rounded-lg text-[#0a0a0a] font-semibold text-sm mt-2 disabled:opacity-60"
             >
-              {loading ? 'Creando cuenta...' : 'Crear cuenta gratis'}
+              {loading ? 'Creando cuenta...' : 'Crear cuenta →'}
             </button>
           </form>
 
@@ -159,5 +210,13 @@ export default function CadastroPage() {
         </div>
       </motion.div>
     </main>
+  )
+}
+
+export default function CadastroPage() {
+  return (
+    <Suspense>
+      <CadastroForm />
+    </Suspense>
   )
 }

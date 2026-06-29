@@ -78,12 +78,14 @@ export default function Pricing() {
           </ul>
 
           {/* CTA */}
-          <Link
-            href="/cadastro?plan=premium"
+          <a
+            href="https://pay.hotmart.com/XXXXX"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-gold block text-center py-4 rounded-md text-[#0a0a0a] font-semibold text-sm"
           >
             Acceder ahora →
-          </Link>
+          </a>
 
           <p className="text-center text-text-muted text-xs mt-4">
             Pago único · Acceso de por vida

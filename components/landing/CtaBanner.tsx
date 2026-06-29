@@ -45,13 +45,15 @@ export default function CtaBanner() {
               Únete a los emprendedores LATAM que usan SwipeSaaS para tomar decisiones
               más inteligentes y lanzar más rápido.
             </p>
-            <Link
-              href="/cadastro"
+            <a
+              href="https://pay.hotmart.com/XXXXX"
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn-gold inline-flex items-center gap-2 px-8 py-4 rounded-md text-[#0a0a0a] font-semibold text-base"
             >
               Empezar ahora
               <ArrowRight size={18} />
-            </Link>
+            </a>
           </div>
         </motion.div>
       </div>
