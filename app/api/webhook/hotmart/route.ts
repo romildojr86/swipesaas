@@ -16,12 +16,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  if (body.hottok !== process.env.HOTMART_HOTTOK) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  console.log('Webhook received:', JSON.stringify(body, null, 2))
+  console.log('hottok:', body.hottok)
+  console.log('email:', (body.data as Record<string, unknown> | undefined)?.buyer)
+
+  if (body.hottok && body.hottok !== process.env.HOTMART_HOTTOK) {
+    console.log('hottok mismatch — rejecting')
+    return NextResponse.json({ error: 'Unauthorized', received: body.hottok }, { status: 401 })
   }
 
   if (body.event !== 'PURCHASE_APPROVED') {
-    return NextResponse.json({ ok: true, skipped: true })
+    console.log('Skipping event:', body.event)
+    return NextResponse.json({ ok: true, skipped: true, event: body.event })
   }
 
   const data = body.data as Record<string, unknown> | undefined
@@ -31,8 +37,10 @@ export async function POST(req: NextRequest) {
   const email = buyer?.email as string | undefined
   const transaction = purchase?.transaction as string | undefined
 
+  console.log('Processing purchase — email:', email, 'transaction:', transaction)
+
   if (!email) {
-    return NextResponse.json({ error: 'Missing buyer email' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing buyer email', body }, { status: 400 })
   }
 
   const { error } = await supabaseAdmin
