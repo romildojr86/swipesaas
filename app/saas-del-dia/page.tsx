@@ -4,6 +4,7 @@ import type { MetaAd } from '@/types'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { SaasEntry } from '@/types'
+import { calcularMetricas, formatarAlcance, formatarInvestimento } from '@/lib/ads-calculations'
 
 export const revalidate = 0
 
@@ -164,6 +165,44 @@ export default async function SaasDelDiaPage() {
                 <h1 className="font-syne font-bold text-white mb-5" style={{ fontSize: '1.5rem' }}>
                   {entry.nome}
                 </h1>
+
+                {/* Métricas de Escala — visible for everyone as free preview */}
+                {(entry.anuncios_ativos ?? 0) > 0 && (() => {
+                  const m = calcularMetricas(entry.anuncios_ativos, entry.data_primeiro_anuncio)
+                  if (!m) return null
+                  return (
+                    <div className="mb-5">
+                      <p className="text-[9px] text-text-muted uppercase tracking-[0.15em] mb-2.5 flex items-center gap-1.5">
+                        <span>📢</span> Métricas de Escala
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mb-2.5">
+                        {[
+                          { label: 'Anuncios Activos', value: entry.anuncios_ativos.toString() },
+                          { label: 'Alcance Estimado', value: formatarAlcance(m.alcanceEstimado) },
+                          { label: 'Inversión/Día', value: formatarInvestimento(m.investimentoDia) },
+                          { label: 'Tiempo en Mercado', value: m.mesesNoMercado > 0 ? `${m.mesesNoMercado} meses` : `${m.diasNoMercado} días` },
+                        ].map(({ label, value }) => (
+                          <div key={label} className="bg-[#0d0d0d] border border-white/5 rounded-xl p-3">
+                            <p className="text-[9px] text-text-muted uppercase tracking-[0.1em] mb-1">{label}</p>
+                            <p className="text-white font-semibold text-sm">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] text-text-muted">Score de Escala</span>
+                          <span className="text-[10px] text-gold font-semibold">{m.score}/100</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${m.score}%`, background: 'linear-gradient(90deg, rgba(201,168,76,0.7) 0%, rgba(201,168,76,1) 100%)' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Metric cards — MRR + Precio side by side */}
                 <div className="grid grid-cols-2 gap-3 mb-5">

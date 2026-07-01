@@ -19,6 +19,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-01-10T00:00:00Z',
   },
   {
@@ -39,6 +41,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-01-15T00:00:00Z',
   },
   {
@@ -59,6 +63,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-01-20T00:00:00Z',
   },
   {
@@ -79,6 +85,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-02-01T00:00:00Z',
   },
   {
@@ -99,6 +107,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-02-10T00:00:00Z',
   },
   {
@@ -119,6 +129,8 @@ export const mockSaasEntries: SaasEntry[] = [
     ads_data: null,
     ads_count: 0,
     ads_last_sync: null,
+    anuncios_ativos: 0,
+    data_primeiro_anuncio: null,
     created_at: '2024-02-15T00:00:00Z',
   },
 ]

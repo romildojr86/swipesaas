@@ -15,37 +15,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing searchTerm' }, { status: 400 })
   }
 
-  const token = process.env.META_ADS_TOKEN
-  if (!token || token === 'seu_token_aqui') {
-    return NextResponse.json({ error: 'META_ADS_TOKEN not configured' }, { status: 500 })
+  const appId = process.env.META_APP_ID
+  const appSecret = process.env.META_APP_SECRET
+  if (!appId || !appSecret) {
+    return NextResponse.json({ error: 'META_APP_ID or META_APP_SECRET not configured' }, { status: 500 })
   }
+
+  const token = `${appId}|${appSecret}`
 
   const params = new URLSearchParams({
     search_terms: searchTerm.trim(),
-    ad_reached_countries: JSON.stringify(['BR', 'US', 'MX', 'AR', 'CO']),
+    ad_reached_countries: '["US","BR","MX","AR","CO"]',
     ad_type: 'ALL',
-    limit: '20',
-    fields: [
-      'id',
-      'ad_creative_body',
-      'ad_creative_link_title',
-      'ad_snapshot_url',
-      'ad_delivery_start_time',
-      'ad_delivery_stop_time',
-      'publisher_platforms',
-      'impressions',
-      'spend',
-    ].join(','),
+    limit: '5',
+    fields: 'id,ad_creative_body,ad_creative_link_title,ad_snapshot_url,ad_delivery_start_time,publisher_platforms',
     access_token: token,
   })
+
+  const urlWithoutToken = `https://graph.facebook.com/v19.0/ads_archive?search_terms=${encodeURIComponent(searchTerm.trim())}&ad_reached_countries=%5B%22US%22%5D&ad_type=ALL&limit=5`
+  console.log('[meta-ads] Calling URL (no token):', urlWithoutToken)
+  console.log('[meta-ads] APP_ID present:', !!appId, '| APP_SECRET present:', !!appSecret)
 
   const res = await fetch(`https://graph.facebook.com/v19.0/ads_archive?${params}`)
   const json = await res.json()
 
+  console.log('[meta-ads] HTTP status:', res.status)
+  console.log('[meta-ads] Raw response:', JSON.stringify(json, null, 2))
+
   if (!res.ok || json.error) {
-    console.error('[meta-ads] API error:', json.error)
     return NextResponse.json(
-      { error: json.error?.message ?? 'Meta API error', detail: json.error },
+      {
+        error: json.error?.message ?? 'Meta API error',
+        meta_error: json.error ?? null,
+        http_status: res.status,
+        raw: json,
+      },
       { status: 502 }
     )
   }
@@ -56,5 +60,5 @@ export async function POST(req: NextRequest) {
     return da - db
   })
 
-  return NextResponse.json({ ads })
+  return NextResponse.json({ ads, raw: json })
 }

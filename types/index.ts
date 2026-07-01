@@ -28,6 +28,8 @@ export interface SaasEntry {
   ads_data: MetaAd[] | null
   ads_count: number
   ads_last_sync: string | null
+  anuncios_ativos: number
+  data_primeiro_anuncio: string | null
   created_at: string
 }
 

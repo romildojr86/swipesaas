@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import type { SaasEntry, MetaAd } from '@/types'
+import { calcularMetricas, formatarAlcance, formatarInvestimento } from '@/lib/ads-calculations'
 
 const flagMap: Record<string, string> = {
   'Estados Unidos': '🇺🇸', Brasil: '🇧🇷', 'México': '🇲🇽', Argentina: '🇦🇷',
@@ -404,6 +405,47 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
                     </div>
                   </div>
                 </div>
+
+                {/* Métricas de Escala — premium only, only if anuncios_ativos > 0 */}
+                {isPremium && (e.anuncios_ativos ?? 0) > 0 && (() => {
+                  const m = calcularMetricas(e.anuncios_ativos, e.data_primeiro_anuncio)
+                  if (!m) return null
+                  return (
+                    <>
+                      <div className="h-px bg-white/5 mx-6" />
+                      <div className="px-6 py-5">
+                        <p className="text-xs text-text-secondary uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                          <span>📢</span> Métricas de Escala
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {[
+                            { label: 'Anuncios Activos', value: e.anuncios_ativos.toString() },
+                            { label: 'Alcance Estimado', value: formatarAlcance(m.alcanceEstimado) },
+                            { label: 'Inversión/Día', value: formatarInvestimento(m.investimentoDia) },
+                            { label: 'Tiempo en el Mercado', value: m.mesesNoMercado > 0 ? `${m.mesesNoMercado} meses` : `${m.diasNoMercado} días` },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-3">
+                              <p className="text-[9px] text-text-muted uppercase tracking-[0.1em] mb-1">{label}</p>
+                              <p className="text-white font-semibold text-sm leading-none">{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-text-muted">Score de Escala</span>
+                            <span className="text-[10px] text-gold font-semibold">{m.score}/100</span>
+                          </div>
+                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${m.score}%`, background: 'linear-gradient(90deg, rgba(201,168,76,0.7) 0%, rgba(201,168,76,1) 100%)' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
 
                 {/* Ads section — premium only */}
                 {isPremium && ads.length > 0 && (
