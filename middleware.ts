@@ -24,17 +24,44 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
-  // Protect /catalogo and /admin — redirect to login if not authenticated
-  if ((pathname.startsWith('/catalogo') || pathname.startsWith('/admin')) && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  const isProtected = pathname.startsWith('/catalogo') || pathname.startsWith('/admin')
+  const isAuthPage = pathname === '/login' || pathname === '/cadastro'
+
+  // Unauthenticated — block protected routes immediately
+  if (!user) {
+    if (isProtected) return NextResponse.redirect(new URL('/login', request.url))
+    return response
   }
 
-  // Redirect authenticated users away from login/cadastro
-  if ((pathname === '/login' || pathname === '/cadastro') && user) {
-    return NextResponse.redirect(new URL('/catalogo', request.url))
+  // Authenticated — fetch profile once for protected routes and auth pages
+  if (isProtected || isAuthPage) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_premium, is_admin')
+      .eq('id', user.id)
+      .single()
+
+    const isPremium = profile?.is_premium ?? false
+    const isAdmin = profile?.is_admin ?? false
+
+    if (isProtected) {
+      // /admin requires is_admin
+      if (pathname.startsWith('/admin') && !isAdmin) {
+        return NextResponse.redirect(new URL('/catalogo', request.url))
+      }
+      // /catalogo requires is_premium or is_admin
+      if (pathname.startsWith('/catalogo') && !isPremium && !isAdmin) {
+        return NextResponse.redirect(new URL('/login?reason=access_revoked', request.url))
+      }
+    }
+
+    // Redirect away from login/cadastro only if user actually has access
+    // (avoids loop: revoked user → /login → /catalogo → /login…)
+    if (isAuthPage && (isPremium || isAdmin)) {
+      return NextResponse.redirect(new URL('/catalogo', request.url))
+    }
   }
 
   return response
