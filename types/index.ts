@@ -1,3 +1,15 @@
+export interface MetaAd {
+  id: string
+  ad_creative_body?: string
+  ad_creative_link_title?: string
+  ad_snapshot_url: string
+  ad_delivery_start_time?: string
+  ad_delivery_stop_time?: string
+  publisher_platforms?: string[]
+  impressions?: { lower_bound: string; upper_bound: string }
+  spend?: { lower_bound: string; upper_bound: string }
+}
+
 export interface SaasEntry {
   id: string
   nome: string
@@ -13,6 +25,9 @@ export interface SaasEntry {
   link_site: string
   link_anuncios: string
   is_featured: boolean
+  ads_data: MetaAd[] | null
+  ads_count: number
+  ads_last_sync: string | null
   created_at: string
 }
 

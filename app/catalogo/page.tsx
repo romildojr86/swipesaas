@@ -6,7 +6,7 @@ import type { SaasEntry } from '@/types'
 import CatalogoClient from '@/components/catalogo/CatalogoClient'
 
 async function getSupabaseServerClient() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -54,7 +54,9 @@ export default async function CatalogoPage() {
   const nichos = ['Todos', ...Array.from(new Set(allEntries.map((e) => e.nicho)))]
   const paises = ['Todos', ...Array.from(new Set(allEntries.map((e) => e.pais_origen)))]
 
-  const userEmail = (profile as { email?: string } | null)?.email ?? user.email ?? ''
+  const profileData = profile as { email?: string; is_premium?: boolean; is_admin?: boolean } | null
+  const userEmail = profileData?.email ?? user.email ?? ''
+  const isPremium = profileData?.is_premium || profileData?.is_admin || false
 
   return (
     <CatalogoClient
@@ -62,6 +64,7 @@ export default async function CatalogoPage() {
       nichos={nichos}
       paises={paises}
       userEmail={userEmail}
+      isPremium={isPremium}
     />
   )
 }

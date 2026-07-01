@@ -10,7 +10,7 @@ import {
   ChevronDown, Upload, ImageIcon, LayoutList, BarChart2, Users, Star,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
-import type { SaasEntry } from '@/types'
+import type { SaasEntry, MetaAd } from '@/types'
 import AnalyticsDashboard from './AnalyticsDashboard'
 import UsersTab, { type AdminProfile } from './UsersTab'
 
@@ -105,6 +105,9 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
   const [activeTab, setActiveTab] = useState<'catalogo' | 'analytics' | 'usuarios'>('catalogo')
+  const [adsPreview, setAdsPreview] = useState<MetaAd[]>([])
+  const [adsSyncing, setAdsSyncing] = useState(false)
+  const [adsError, setAdsError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -113,16 +116,57 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  const handleSyncAds = async () => {
+    if (!editingEntry || !form.nome) return
+    setAdsSyncing(true)
+    setAdsError('')
+    setAdsPreview([])
+
+    const res = await fetch('/api/meta-ads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searchTerm: form.nome }),
+    })
+    const json = await res.json()
+    setAdsSyncing(false)
+
+    if (!res.ok) {
+      setAdsError(json.error ?? 'Error al sincronizar con Meta')
+      return
+    }
+
+    const ads: MetaAd[] = json.ads ?? []
+    setAdsPreview(ads)
+
+    await supabase.from('saas_entries').update({
+      ads_data: ads,
+      ads_count: ads.length,
+      ads_last_sync: new Date().toISOString(),
+    }).eq('id', editingEntry.id)
+
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === editingEntry.id
+          ? { ...e, ads_data: ads, ads_count: ads.length, ads_last_sync: new Date().toISOString() }
+          : e
+      )
+    )
+  }
+
   const openAdd = () => {
     setEditingEntry(null)
     setForm(EMPTY_FORM)
     setCoverPreview(null)
     setUploadedUrl(null)
     setSaveError('')
+    setAdsPreview([])
+    setAdsError('')
     setModalOpen(true)
   }
 
   const openEdit = (entry: SaasEntry) => {
+    setAdsPreview(entry.ads_data ?? [])
+    setAdsError('')
     setEditingEntry(entry)
     setForm({
       nome: entry.nome,
@@ -702,6 +746,70 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
                     />
                   </div>
                 </div>
+
+                {/* Sync Meta Ads — only available when editing an existing entry */}
+                {editingEntry && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs text-text-secondary uppercase tracking-wider">
+                        Anuncios Meta
+                      </label>
+                      {editingEntry.ads_last_sync && (
+                        <span className="text-[10px] text-text-muted">
+                          Sync: {new Date(editingEntry.ads_last_sync).toLocaleDateString('es')}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSyncAds}
+                      disabled={adsSyncing}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-white/8 text-text-secondary hover:text-white hover:border-white/20 text-sm transition-colors disabled:opacity-50"
+                    >
+                      {adsSyncing ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>🔄 Sincronizar anuncios</>
+                      )}
+                    </button>
+                    {adsError && (
+                      <p className="text-xs text-red-400 mt-1.5">{adsError}</p>
+                    )}
+                    {adsPreview.length > 0 && (
+                      <div className="mt-2 bg-[#0a0a0a] border border-white/5 rounded-lg p-3">
+                        <p className="text-[10px] text-green-400/80 mb-2">
+                          ✓ {adsPreview.length} anuncios encontrados y guardados
+                        </p>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                          {adsPreview.slice(0, 5).map((ad) => (
+                            <a
+                              key={ad.id}
+                              href={ad.ad_snapshot_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2 hover:bg-white/3 rounded p-1 transition-colors"
+                            >
+                              <div className="flex gap-1 shrink-0 mt-0.5">
+                                {(ad.publisher_platforms ?? []).slice(0, 2).map((p) => (
+                                  <span key={p} className="text-[8px] bg-white/5 border border-white/8 rounded px-1 py-0.5 text-text-muted uppercase">
+                                    {p === 'facebook' ? 'FB' : p === 'instagram' ? 'IG' : p.slice(0, 3).toUpperCase()}
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="text-[11px] text-text-secondary leading-snug line-clamp-1 flex-1">
+                                {ad.ad_creative_body || ad.ad_creative_link_title || 'Ver anuncio →'}
+                              </p>
+                              <ExternalLink size={10} className="text-text-muted shrink-0 mt-0.5" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">

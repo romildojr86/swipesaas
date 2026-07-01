@@ -9,69 +9,72 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import type { SaasEntry } from '@/types'
+import type { SaasEntry, MetaAd } from '@/types'
 
 const flagMap: Record<string, string> = {
-  'Estados Unidos': '🇺🇸',
-  Brasil: '🇧🇷',
-  'México': '🇲🇽',
-  Argentina: '🇦🇷',
-  Colombia: '🇨🇴',
-  Chile: '🇨🇱',
-  'Perú': '🇵🇪',
-  'España': '🇪🇸',
-  'Reino Unido': '🇬🇧',
-  Alemania: '🇩🇪',
-  Francia: '🇫🇷',
-  'Canadá': '🇨🇦',
-  Australia: '🇦🇺',
-  'Países Bajos': '🇳🇱',
-  Holanda: '🇳🇱',
-  Suecia: '🇸🇪',
-  Dinamarca: '🇩🇰',
-  Finlandia: '🇫🇮',
-  Noruega: '🇳🇴',
-  Portugal: '🇵🇹',
-  India: '🇮🇳',
-  'Japón': '🇯🇵',
-  'Corea del Sur': '🇰🇷',
-  Bulgaria: '🇧🇬',
-  'Bélgica': '🇧🇪',
-  Estonia: '🇪🇪',
-  Uruguay: '🇺🇾',
-  Ecuador: '🇪🇨',
-  Paraguay: '🇵🇾',
-  Bolivia: '🇧🇴',
-  Venezuela: '🇻🇪',
-  'Panamá': '🇵🇦',
-  'Costa Rica': '🇨🇷',
-  Guatemala: '🇬🇹',
-  'República Dominicana': '🇩🇴',
+  'Estados Unidos': '🇺🇸', Brasil: '🇧🇷', 'México': '🇲🇽', Argentina: '🇦🇷',
+  Colombia: '🇨🇴', Chile: '🇨🇱', 'Perú': '🇵🇪', 'España': '🇪🇸',
+  'Reino Unido': '🇬🇧', Alemania: '🇩🇪', Francia: '🇫🇷', 'Canadá': '🇨🇦',
+  Australia: '🇦🇺', 'Países Bajos': '🇳🇱', Holanda: '🇳🇱', Suecia: '🇸🇪',
+  Dinamarca: '🇩🇰', Finlandia: '🇫🇮', Noruega: '🇳🇴', Portugal: '🇵🇹',
+  India: '🇮🇳', 'Japón': '🇯🇵', 'Corea del Sur': '🇰🇷', Bulgaria: '🇧🇬',
+  'Bélgica': '🇧🇪', Estonia: '🇪🇪', Uruguay: '🇺🇾', Ecuador: '🇪🇨',
+  Paraguay: '🇵🇾', Bolivia: '🇧🇴', Venezuela: '🇻🇪', 'Panamá': '🇵🇦',
+  'Costa Rica': '🇨🇷', Guatemala: '🇬🇹', 'República Dominicana': '🇩🇴',
 }
 
 const monedaSymbol: Record<string, string> = {
-  USD: '$',
-  BRL: 'R$',
-  EUR: '€',
-  MXN: 'MX$',
-  ARS: 'AR$',
-  COP: 'COP$',
-  CLP: 'CLP$',
+  USD: '$', BRL: 'R$', EUR: '€', MXN: 'MX$', ARS: 'AR$', COP: 'COP$', CLP: 'CLP$',
 }
 
 const nichoGlow: Record<string, string> = {
-  Productividad: 'rgba(139,92,246,0.14)',
-  Marketing: 'rgba(234,88,12,0.14)',
-  Finanzas: 'rgba(16,185,129,0.14)',
-  Educación: 'rgba(59,130,246,0.14)',
-  Salud: 'rgba(236,72,153,0.14)',
-  'E-commerce': 'rgba(245,158,11,0.14)',
-  'Dev Tools': 'rgba(99,102,241,0.14)',
-  Analytics: 'rgba(20,184,166,0.14)',
-  Formularios: 'rgba(168,85,247,0.14)',
-  Pagamentos: 'rgba(201,168,76,0.14)',
-  'Redes Sociales': 'rgba(14,165,233,0.14)',
-  Otros: 'rgba(100,116,139,0.14)',
+  Productividad: 'rgba(139,92,246,0.14)', Marketing: 'rgba(234,88,12,0.14)',
+  Finanzas: 'rgba(16,185,129,0.14)', 'Educación': 'rgba(59,130,246,0.14)',
+  Salud: 'rgba(236,72,153,0.14)', 'E-commerce': 'rgba(245,158,11,0.14)',
+  'Dev Tools': 'rgba(99,102,241,0.14)', Analytics: 'rgba(20,184,166,0.14)',
+  Formularios: 'rgba(168,85,247,0.14)', Pagamentos: 'rgba(201,168,76,0.14)',
+  'Redes Sociales': 'rgba(14,165,233,0.14)', Otros: 'rgba(100,116,139,0.14)',
+}
+
+const PLATFORM_LABEL: Record<string, string> = {
+  facebook: 'FB', instagram: 'IG', messenger: 'MSG', whatsapp: 'WA', audience_network: 'AN',
+}
+
+function formatAdDate(iso?: string) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return d.toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })
+}
+
+function AdCard({ ad }: { ad: MetaAd }) {
+  const platforms = ad.publisher_platforms?.slice(0, 3) ?? []
+  const date = formatAdDate(ad.ad_delivery_start_time)
+  const body = ad.ad_creative_body || ad.ad_creative_link_title || ''
+
+  return (
+    <a
+      href={ad.ad_snapshot_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex flex-col gap-2 bg-[#0a0a0a] border border-white/5 rounded-lg p-3 hover:border-gold/20 transition-colors"
+    >
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {platforms.map((p) => (
+          <span key={p} className="text-[9px] text-text-muted bg-white/5 border border-white/8 rounded px-1.5 py-0.5 uppercase tracking-wider">
+            {PLATFORM_LABEL[p] ?? p}
+          </span>
+        ))}
+        {date && <span className="text-[9px] text-text-muted ml-auto">{date}</span>}
+      </div>
+      {body && (
+        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">{body}</p>
+      )}
+      <span className="text-[9px] text-gold/60 group-hover:text-gold transition-colors flex items-center gap-0.5 mt-auto">
+        <ExternalLink size={9} />
+        Ver anuncio
+      </span>
+    </a>
+  )
 }
 
 interface Props {
@@ -79,9 +82,10 @@ interface Props {
   nichos: string[]
   paises: string[]
   userEmail: string
+  isPremium: boolean
 }
 
-export default function CatalogoClient({ entries, nichos, paises, userEmail }: Props) {
+export default function CatalogoClient({ entries, nichos, paises, userEmail, isPremium }: Props) {
   const [search, setSearch] = useState('')
   const [nichoFilter, setNichoFilter] = useState('Todos')
   const [paisFilter, setPaisFilter] = useState('Todos')
@@ -160,8 +164,6 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-10">
-
-        {/* Page heading */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -254,51 +256,40 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                   whileHover={{ y: -4 }}
                   className="group flex flex-col bg-[#111111] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(201,168,76,0.15)] hover:border-[rgba(201,168,76,0.38)]"
                 >
-                  {/* Top — cover image OR emoji + glow + badge */}
                   <div
                     className="relative h-[180px] flex items-center justify-center overflow-hidden shrink-0"
                     style={{ background: '#161616' }}
                   >
                     {entry.cover_url ? (
-                      <img
-                        src={entry.cover_url}
-                        alt={entry.nome}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      <img src={entry.cover_url} alt={entry.nome} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <>
                         <div
                           className="absolute inset-0"
-                          style={{
-                            background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)`,
-                          }}
+                          style={{ background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)` }}
                         />
-                        <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>
-                          {emoji}
-                        </span>
+                        <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>{emoji}</span>
                       </>
                     )}
                     <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-black/50 border border-gold/25 rounded-full px-2.5 py-1 backdrop-blur-sm">
                       <span className="text-[10px] leading-none">🚀</span>
                       <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
                     </div>
+                    {(entry.ads_count ?? 0) > 0 && (
+                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 border border-white/15 rounded-full px-2 py-1 backdrop-blur-sm">
+                        <Megaphone size={9} className="text-text-muted" />
+                        <span className="text-[9px] text-text-muted">{entry.ads_count}</span>
+                      </div>
+                    )}
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
-                    <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                      style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }}
-                    />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }} />
                   </div>
 
-                  {/* Body */}
                   <div className="flex flex-col flex-1 p-4 gap-3">
                     <div>
-                      <h3 className="text-white font-semibold text-[1.05rem] leading-snug truncate mb-0.5">
-                        {entry.nome}
-                      </h3>
+                      <h3 className="text-white font-semibold text-[1.05rem] leading-snug truncate mb-0.5">{entry.nome}</h3>
                       <p className="text-text-muted text-xs">{flag} {entry.pais_origen}</p>
                     </div>
-
-                    {/* Metrics */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
                         <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Modelo</p>
@@ -317,8 +308,6 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                         </p>
                       </div>
                     )}
-
-                    {/* Single CTA */}
                     <button
                       onClick={() => setSelectedEntry(entry)}
                       className="mt-auto w-full py-2 rounded-lg border border-gold/30 text-gold text-[11px] font-semibold hover:bg-gold/8 hover:border-gold/50 transition-colors"
@@ -339,6 +328,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
           const e = selectedEntry
           const emoji = e.emoji || e.nome[0]
           const flag = flagMap[e.pais_origen] ?? ''
+          const ads = (e.ads_data ?? []).slice(0, 12)
 
           return (
             <motion.div
@@ -356,13 +346,11 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 12 }}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="relative bg-[#111111] border border-gold/20 rounded-2xl w-full max-w-[560px] overflow-hidden"
+                className="relative bg-[#111111] border border-gold/20 rounded-2xl w-full max-w-[560px] max-h-[90vh] overflow-y-auto"
                 style={{ boxShadow: '0 0 60px rgba(201,168,76,0.08), 0 24px 60px rgba(0,0,0,0.6)' }}
               >
-                {/* Subtle top glow line */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent z-10" />
 
-                {/* Cover banner (if exists) */}
                 {e.cover_url && (
                   <div className="relative w-full h-[200px] overflow-hidden">
                     <img src={e.cover_url} alt={e.nome} className="w-full h-full object-cover" />
@@ -370,15 +358,12 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                   </div>
                 )}
 
-                {/* Header */}
                 <div className="flex items-center gap-4 px-6 pt-5 pb-5">
                   {!e.cover_url && (
                     <span className="select-none shrink-0" style={{ fontSize: 48, lineHeight: 1 }}>{emoji}</span>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-syne font-bold text-white text-2xl leading-tight truncate">
-                      {e.nome}
-                    </h2>
+                    <h2 className="font-syne font-bold text-white text-2xl leading-tight truncate">{e.nome}</h2>
                     <p className="text-text-secondary text-sm mt-0.5">{flag} {e.pais_origen}</p>
                   </div>
                   <button
@@ -389,67 +374,63 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail }: P
                   </button>
                 </div>
 
-                {/* Divider */}
                 <div className="h-px bg-white/5 mx-6" />
 
-                {/* Metrics: top row 3-col, bottom row 2-col */}
                 <div className="px-6 py-5 space-y-3">
                   <div className="grid grid-cols-3 gap-3">
-                    {/* MRR */}
                     <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                        <span>💰</span> MRR
-                      </p>
-                      <p className="text-gold font-syne font-bold text-lg leading-none">
-                        {e.mrr || '—'}
-                      </p>
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5"><span>💰</span> MRR</p>
+                      <p className="text-gold font-syne font-bold text-lg leading-none">{e.mrr || '—'}</p>
                     </div>
-
-                    {/* Precio */}
                     <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                        <span>💵</span> Precio
-                      </p>
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5"><span>💵</span> Precio</p>
                       <p className="text-white font-semibold text-sm leading-snug">
                         {e.precio ? `${monedaSymbol[e.moneda] ?? ''}${e.precio}` : '—'}
                       </p>
                     </div>
-
-                    {/* Modelo */}
                     <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                        <span>📊</span> Modelo
-                      </p>
-                      <p className="text-white font-semibold text-sm leading-none">
-                        {e.modelo_preco}
-                      </p>
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5"><span>📊</span> Modelo</p>
+                      <p className="text-white font-semibold text-sm leading-none">{e.modelo_preco}</p>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Nicho */}
                     <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                        <span>🎯</span> Nicho
-                      </p>
-                      <p className="text-gold font-semibold text-base leading-none">
-                        {e.nicho}
-                      </p>
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5"><span>🎯</span> Nicho</p>
+                      <p className="text-gold font-semibold text-base leading-none">{e.nicho}</p>
                     </div>
-
-                    {/* País */}
                     <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-xl p-4">
-                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5">
-                        <span>🌍</span> País
-                      </p>
-                      <p className="text-white font-semibold text-base leading-none">
-                        {flag} {e.pais_origen}
-                      </p>
+                      <p className="text-xs text-text-muted mb-1.5 flex items-center gap-1.5"><span>🌍</span> País</p>
+                      <p className="text-white font-semibold text-base leading-none">{flag} {e.pais_origen}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Action buttons */}
+                {/* Ads section — premium only */}
+                {isPremium && ads.length > 0 && (
+                  <>
+                    <div className="h-px bg-white/5 mx-6" />
+                    <div className="px-6 py-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                          <Megaphone size={11} className="text-gold" />
+                          Anuncios activos
+                        </p>
+                        <span className="text-[10px] text-text-muted bg-white/5 border border-white/8 rounded-full px-2 py-0.5">
+                          {e.ads_count} encontrados
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {ads.map((ad) => <AdCard key={ad.id} ad={ad} />)}
+                      </div>
+                      {e.ads_last_sync && (
+                        <p className="text-[9px] text-text-muted mt-2.5">
+                          Sincronizado {new Date(e.ads_last_sync).toLocaleDateString('es')}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <div className="px-6 pb-6 flex flex-col gap-2.5">
                   {e.link_site && (
                     <a

@@ -1,10 +1,46 @@
 import Link from 'next/link'
 import { Lock, ExternalLink, Megaphone, Star } from 'lucide-react'
+import type { MetaAd } from '@/types'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { SaasEntry } from '@/types'
 
 export const revalidate = 0
+
+const PLATFORM_LABEL: Record<string, string> = {
+  facebook: 'FB', instagram: 'IG', messenger: 'MSG', whatsapp: 'WA',
+}
+
+function AdCardStatic({ ad }: { ad: MetaAd }) {
+  const platforms = ad.publisher_platforms?.slice(0, 2) ?? []
+  const date = ad.ad_delivery_start_time
+    ? new Date(ad.ad_delivery_start_time).toLocaleDateString('es', { day: '2-digit', month: 'short' })
+    : null
+  const body = ad.ad_creative_body || ad.ad_creative_link_title || ''
+
+  return (
+    <a
+      href={ad.ad_snapshot_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex flex-col gap-1.5 bg-[#0d0d0d] border border-white/5 rounded-lg p-3 hover:border-gold/20 transition-colors"
+    >
+      <div className="flex items-center gap-1 flex-wrap">
+        {platforms.map((p) => (
+          <span key={p} className="text-[8px] text-text-muted bg-white/5 border border-white/8 rounded px-1.5 py-0.5 uppercase tracking-wider">
+            {PLATFORM_LABEL[p] ?? p}
+          </span>
+        ))}
+        {date && <span className="text-[8px] text-text-muted ml-auto">{date}</span>}
+      </div>
+      {body && <p className="text-[10px] text-text-secondary leading-snug line-clamp-2">{body}</p>}
+      <span className="text-[9px] text-gold/50 flex items-center gap-0.5 mt-auto">
+        <ExternalLink size={8} />
+        Ver anuncio
+      </span>
+    </a>
+  )
+}
 
 const FLAG_MAP: Record<string, string> = {
   'Estados Unidos': '🇺🇸', 'Brasil': '🇧🇷', 'México': '🇲🇽', 'Argentina': '🇦🇷',
@@ -219,6 +255,44 @@ export default async function SaasDelDiaPage() {
                 </div>
               </div>
             </div>
+
+            {/* ── Ads section ── */}
+            {(entry.ads_data ?? []).length > 0 && (
+              <div className="mt-4 rounded-2xl overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Megaphone size={12} className="text-gold" />
+                    <span className="text-xs text-text-secondary uppercase tracking-wider">Anuncios activos</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted bg-white/5 border border-white/8 rounded-full px-2 py-0.5">
+                    {entry.ads_count}
+                  </span>
+                </div>
+                <div className="relative p-4">
+                  <div className={`grid grid-cols-2 gap-2 ${!isPremium ? 'pointer-events-none' : ''}`}>
+                    {(entry.ads_data ?? []).slice(0, 6).map((ad) => (
+                      <AdCardStatic key={ad.id} ad={ad} />
+                    ))}
+                  </div>
+                  {!isPremium && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-b-2xl"
+                      style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(6px)' }}>
+                      <Lock size={18} className="text-gold mb-2" />
+                      <p className="text-white text-xs font-semibold mb-1">Contenido premium</p>
+                      <p className="text-text-muted text-[10px] mb-3 text-center px-6">Accede a todos los anuncios con tu membresía</p>
+                      <a
+                        href="https://pay.hotmart.com/S106537389G?checkoutMode=10"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-gold text-[10px] font-semibold text-[#0a0a0a] px-4 py-2 rounded-lg"
+                      >
+                        ⭐ Quiero acceso premium
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Upgrade block (always visible) ── */}
             <div
