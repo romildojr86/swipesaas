@@ -1,5 +1,21 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+
+// Bypasses RLS and Supabase client-side caching for fresh profile reads
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+          fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
+  )
+}
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -23,21 +39,22 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Validates JWT against Supabase auth server (always fresh)
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
   const isProtected = pathname.startsWith('/catalogo') || pathname.startsWith('/admin')
   const isAuthPage = pathname === '/login' || pathname === '/cadastro'
 
-  // Unauthenticated — block protected routes immediately
   if (!user) {
     if (isProtected) return NextResponse.redirect(new URL('/login', request.url))
     return response
   }
 
-  // Authenticated — fetch profile once for protected routes and auth pages
   if (isProtected || isAuthPage) {
-    const { data: profile } = await supabase
+    // Use service role client with no-store fetch to get live DB value
+    const admin = getAdminClient()
+    const { data: profile } = await admin
       .from('profiles')
       .select('is_premium, is_admin')
       .eq('id', user.id)
@@ -47,21 +64,24 @@ export async function middleware(request: NextRequest) {
     const isAdmin = profile?.is_admin ?? false
 
     if (isProtected) {
-      // /admin requires is_admin
       if (pathname.startsWith('/admin') && !isAdmin) {
         return NextResponse.redirect(new URL('/catalogo', request.url))
       }
-      // /catalogo requires is_premium or is_admin
       if (pathname.startsWith('/catalogo') && !isPremium && !isAdmin) {
         return NextResponse.redirect(new URL('/login?reason=access_revoked', request.url))
       }
     }
 
-    // Redirect away from login/cadastro only if user actually has access
-    // (avoids loop: revoked user → /login → /catalogo → /login…)
+    // Only redirect away from login if user actually has access (avoids redirect loop)
     if (isAuthPage && (isPremium || isAdmin)) {
       return NextResponse.redirect(new URL('/catalogo', request.url))
     }
+  }
+
+  // Prevent CDN/browser from caching protected page responses
+  if (isProtected) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
   }
 
   return response
