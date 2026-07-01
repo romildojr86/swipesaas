@@ -44,16 +44,33 @@ export default function UsersTab({ initialProfiles, premiumPrice = 19 }: Props) 
   const premiumCount = profiles.filter((p) => p.is_premium).length
   const revenue = premiumCount * premiumPrice
 
-  const togglePremium = async (profile: AdminProfile, newValue: boolean) => {
+  const grantPremium = async (profile: AdminProfile) => {
     setToggling(profile.id)
     const { error } = await supabase
       .from('profiles')
-      .update({ is_premium: newValue })
+      .update({ is_premium: true })
       .eq('id', profile.id)
 
     if (!error) {
       setProfiles((prev) =>
-        prev.map((p) => (p.id === profile.id ? { ...p, is_premium: newValue } : p))
+        prev.map((p) => (p.id === profile.id ? { ...p, is_premium: true } : p))
+      )
+    }
+    setToggling(null)
+  }
+
+  const revokePremium = async (profile: AdminProfile) => {
+    setToggling(profile.id)
+
+    const res = await fetch('/api/revoke-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: profile.id }),
+    })
+
+    if (res.ok) {
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profile.id ? { ...p, is_premium: false } : p))
       )
     }
     setToggling(null)
@@ -150,7 +167,7 @@ export default function UsersTab({ initialProfiles, premiumPrice = 19 }: Props) 
                       </button>
                     ) : (
                       <button
-                        onClick={() => togglePremium(profile, true)}
+                        onClick={() => grantPremium(profile)}
                         disabled={toggling === profile.id}
                         className="text-xs px-3 py-1.5 rounded-md border border-gold/30 text-gold hover:bg-gold/8 transition-colors disabled:opacity-40"
                       >
@@ -207,7 +224,7 @@ export default function UsersTab({ initialProfiles, premiumPrice = 19 }: Props) 
                   Cancelar
                 </button>
                 <button
-                  onClick={() => togglePremium(revokeTarget, false)}
+                  onClick={() => revokePremium(revokeTarget)}
                   disabled={toggling === revokeTarget.id}
                   className="flex-1 py-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-sm font-medium transition-colors disabled:opacity-50"
                 >
