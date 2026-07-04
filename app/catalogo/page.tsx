@@ -97,7 +97,7 @@ export default async function CatalogoPage({
     .select('created_at')
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle() as { data: { created_at: string } | null }
 
   const lastUpdated = latestRow?.created_at
     ? new Date(latestRow.created_at).toLocaleDateString('es', {
