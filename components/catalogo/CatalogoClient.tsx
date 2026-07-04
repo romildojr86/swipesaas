@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, LogOut, Database, Tag, Globe, RefreshCw,
-  ChevronDown, X, ExternalLink, Megaphone,
+  ChevronDown, X, ExternalLink, Megaphone, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -43,8 +43,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 
 function formatAdDate(iso?: string) {
   if (!iso) return null
-  const d = new Date(iso)
-  return d.toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })
+  return new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })
 }
 
 function AdCard({ ad }: { ad: MetaAd }) {
@@ -67,9 +66,7 @@ function AdCard({ ad }: { ad: MetaAd }) {
         ))}
         {date && <span className="text-[9px] text-text-muted ml-auto">{date}</span>}
       </div>
-      {body && (
-        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">{body}</p>
-      )}
+      {body && <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">{body}</p>}
       <span className="text-[9px] text-gold/60 group-hover:text-gold transition-colors flex items-center gap-0.5 mt-auto">
         <ExternalLink size={9} />
         Ver anuncio
@@ -78,33 +75,198 @@ function AdCard({ ad }: { ad: MetaAd }) {
   )
 }
 
+// ── Pagination ──────────────────────────────────────────────────────────────
+
+function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+
+  const show = new Set<number>()
+  show.add(1)
+  show.add(total)
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) show.add(i)
+
+  const sorted = Array.from(show).sort((a, b) => a - b)
+  const result: (number | 'ellipsis')[] = []
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push('ellipsis')
+    result.push(sorted[i])
+  }
+  return result
+}
+
+interface PaginationProps {
+  page: number
+  totalPages: number
+  totalCount: number
+  pageSize: number
+  onPageChange: (p: number) => void
+}
+
+function Pagination({ page, totalPages, totalCount, pageSize, onPageChange }: PaginationProps) {
+  if (totalPages <= 1) return null
+
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, totalCount)
+  const pages = getPageNumbers(page, totalPages)
+
+  const btnBase =
+    'h-8 min-w-[2rem] px-2 rounded-lg text-xs font-medium flex items-center justify-center transition-all duration-150'
+
+  return (
+    <div className="flex flex-col items-center gap-3 mt-10">
+      <p className="text-[11px] text-text-muted">
+        Mostrando <span className="text-white">{from}–{to}</span> de{' '}
+        <span className="text-white">{totalCount}</span> SaaS
+      </p>
+
+      <div className="flex items-center gap-1">
+        {/* Anterior */}
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page === 1}
+          className={`${btnBase} gap-1 px-3 border border-white/8 text-text-secondary hover:text-white hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed`}
+        >
+          <ChevronLeft size={13} />
+          Anterior
+        </button>
+
+        {/* Page numbers */}
+        <div className="flex items-center gap-1 mx-1">
+          {pages.map((p, i) =>
+            p === 'ellipsis' ? (
+              <span key={`el-${i}`} className="text-text-muted text-xs px-1">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`${btnBase} border ${
+                  p === page
+                    ? 'bg-gold text-[#0a0a0a] border-gold font-semibold'
+                    : 'border-white/8 text-text-secondary hover:text-white hover:border-white/20'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Siguiente */}
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page === totalPages}
+          className={`${btnBase} gap-1 px-3 border border-white/8 text-text-secondary hover:text-white hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed`}
+        >
+          Siguiente
+          <ChevronRight size={13} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Props ────────────────────────────────────────────────────────────────────
+
+interface CurrentFilters {
+  nicho: string
+  pais: string
+  modelo: string
+  q: string
+}
+
 interface Props {
   entries: SaasEntry[]
   nichos: string[]
   paises: string[]
+  modelos: string[]
   userEmail: string
   isPremium: boolean
+  page: number
+  totalPages: number
+  totalCount: number
+  pageSize: number
+  currentFilters: CurrentFilters
 }
 
-export default function CatalogoClient({ entries, nichos, paises, userEmail, isPremium }: Props) {
-  const [search, setSearch] = useState('')
-  const [nichoFilter, setNichoFilter] = useState('Todos')
-  const [paisFilter, setPaisFilter] = useState('Todos')
-  const [modeloFilter, setModeloFilter] = useState('Todos')
+// ── Main Component ───────────────────────────────────────────────────────────
+
+export default function CatalogoClient({
+  entries,
+  nichos,
+  paises,
+  modelos,
+  userEmail,
+  isPremium,
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  currentFilters,
+}: Props) {
+  // Local state — mirrors URL, gives instant feedback before navigation
+  const [nichoFilter, setNichoFilter] = useState(currentFilters.nicho)
+  const [paisFilter, setPaisFilter] = useState(currentFilters.pais)
+  const [modeloFilter, setModeloFilter] = useState(currentFilters.modelo)
+  const [search, setSearch] = useState(currentFilters.q)
   const [selectedEntry, setSelectedEntry] = useState<SaasEntry | null>(null)
+
   const router = useRouter()
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const catalogRef = useRef<HTMLDivElement>(null)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const modelos = useMemo(
-    () => ['Todos', ...Array.from(new Set(entries.map((e) => e.modelo_preco)))],
-    [entries]
+  // Build URL and navigate
+  const navigate = useCallback(
+    (overrides: Partial<CurrentFilters & { page: number }>) => {
+      const merged = {
+        nicho: nichoFilter,
+        pais: paisFilter,
+        modelo: modeloFilter,
+        q: search,
+        page: 1,
+        ...overrides,
+      }
+      const params = new URLSearchParams()
+      if (merged.q) params.set('q', merged.q)
+      if (merged.nicho !== 'Todos') params.set('nicho', merged.nicho)
+      if (merged.pais !== 'Todos') params.set('pais', merged.pais)
+      if (merged.modelo !== 'Todos') params.set('modelo', merged.modelo)
+      if (merged.page > 1) params.set('page', merged.page.toString())
+      const qs = params.toString()
+      router.push(`/catalogo${qs ? `?${qs}` : ''}`)
+    },
+    [nichoFilter, paisFilter, modeloFilter, search, router]
   )
-  const nichoCount = useMemo(() => new Set(entries.map((e) => e.nicho)).size, [entries])
-  const paisCount = useMemo(() => new Set(entries.map((e) => e.pais_origen)).size, [entries])
+
+  const handleSearch = (value: string) => {
+    setSearch(value)
+    if (searchDebounce.current) clearTimeout(searchDebounce.current)
+    searchDebounce.current = setTimeout(() => navigate({ q: value, page: 1 }), 400)
+  }
+
+  const handleNicho = (value: string) => {
+    setNichoFilter(value)
+    navigate({ nicho: value, page: 1 })
+  }
+
+  const handlePais = (value: string) => {
+    setPaisFilter(value)
+    navigate({ pais: value, page: 1 })
+  }
+
+  const handleModelo = (value: string) => {
+    setModeloFilter(value)
+    navigate({ modelo: value, page: 1 })
+  }
+
+  const handlePageChange = (p: number) => {
+    navigate({ page: p })
+    catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -112,31 +274,23 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
     router.refresh()
   }
 
-  const filtered = entries.filter((entry) => {
-    const q = search.toLowerCase()
-    const matchSearch =
-      !q ||
-      entry.nome.toLowerCase().includes(q) ||
-      entry.nicho.toLowerCase().includes(q) ||
-      entry.pais_origen.toLowerCase().includes(q)
-    const matchNicho = nichoFilter === 'Todos' || entry.nicho === nichoFilter
-    const matchPais = paisFilter === 'Todos' || entry.pais_origen === paisFilter
-    const matchModelo = modeloFilter === 'Todos' || entry.modelo_preco === modeloFilter
-    return matchSearch && matchNicho && matchPais && matchModelo
-  })
+  // Counts for stat cards derived from all available option lists
+  const nichoCount = nichos.length - 1
+  const paisCount = paises.length - 1
 
   const statCards = [
-    { label: 'Total SaaS', value: entries.length.toString(), icon: <Database size={15} />, isText: false },
+    { label: 'Total SaaS', value: totalCount.toString(), icon: <Database size={15} />, isText: false },
     { label: 'Nichos', value: nichoCount.toString(), icon: <Tag size={15} />, isText: false },
     { label: 'Países', value: paisCount.toString(), icon: <Globe size={15} />, isText: false },
     { label: 'Actualizado', value: 'Semanal', icon: <RefreshCw size={15} />, isText: true },
   ]
 
-  const dropdowns = [
-    { value: nichoFilter, set: setNichoFilter, options: nichos, placeholder: 'Todos los nichos' },
-    { value: paisFilter, set: setPaisFilter, options: paises, placeholder: 'Todos los países' },
-    { value: modeloFilter, set: setModeloFilter, options: modelos, placeholder: 'Todos los modelos' },
-  ]
+  const dropdowns = useMemo(() => [
+    { value: nichoFilter, handler: handleNicho, options: nichos, placeholder: 'Todos los nichos' },
+    { value: paisFilter, handler: handlePais, options: paises, placeholder: 'Todos los países' },
+    { value: modeloFilter, handler: handleModelo, options: modelos, placeholder: 'Todos los modelos' },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [nichoFilter, paisFilter, modeloFilter, nichos, paises, modelos])
 
   return (
     <main className="min-h-screen">
@@ -172,7 +326,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
           className="mb-7"
         >
           <h1 className="font-syne font-semibold text-white text-4xl mb-1">Catálogo</h1>
-          <p className="text-text-secondary text-sm">{filtered.length} SaaS disponibles</p>
+          <p className="text-text-secondary text-sm">{totalCount} SaaS disponibles</p>
         </motion.div>
 
         {/* Stats row */}
@@ -212,17 +366,17 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder="Buscar por nombre, nicho o país..."
               className="w-full bg-[#111111] border border-white/8 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-text-muted focus:outline-none focus:border-gold/40 transition-colors"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {dropdowns.map(({ value, set, options, placeholder }) => (
+            {dropdowns.map(({ value, handler, options, placeholder }) => (
               <div key={placeholder} className="relative">
                 <select
                   value={value}
-                  onChange={(e) => set(e.target.value)}
+                  onChange={(e) => handler(e.target.value)}
                   className="w-full bg-[#111111] border border-white/8 rounded-xl px-4 py-3 pr-9 text-text-secondary text-sm focus:outline-none focus:border-gold/40 appearance-none transition-colors"
                 >
                   <option value="Todos">{placeholder}</option>
@@ -237,90 +391,101 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
         </motion.div>
 
         {/* Cards grid */}
-        {filtered.length === 0 ? (
-          <div className="text-center py-20 text-text-secondary text-sm">
-            No se encontraron resultados para tu búsqueda.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {filtered.map((entry, i) => {
-              const emoji = entry.emoji || entry.nome[0]
-              const flag = flagMap[entry.pais_origen] ?? ''
-              const glow = nichoGlow[entry.nicho] ?? 'rgba(201,168,76,0.10)'
+        <div ref={catalogRef}>
+          {entries.length === 0 ? (
+            <div className="text-center py-20 text-text-secondary text-sm">
+              No se encontraron resultados para tu búsqueda.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {entries.map((entry, i) => {
+                const emoji = entry.emoji || entry.nome[0]
+                const flag = flagMap[entry.pais_origen] ?? ''
+                const glow = nichoGlow[entry.nicho] ?? 'rgba(201,168,76,0.10)'
 
-              return (
-                <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                  whileHover={{ y: -4 }}
-                  className="group flex flex-col bg-[#111111] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(201,168,76,0.15)] hover:border-[rgba(201,168,76,0.38)]"
-                >
-                  <div
-                    className="relative h-[180px] flex items-center justify-center overflow-hidden shrink-0"
-                    style={{ background: '#161616' }}
+                return (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    whileHover={{ y: -4 }}
+                    className="group flex flex-col bg-[#111111] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(201,168,76,0.15)] hover:border-[rgba(201,168,76,0.38)]"
                   >
-                    {entry.cover_url ? (
-                      <img src={entry.cover_url} alt={entry.nome} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <>
-                        <div
-                          className="absolute inset-0"
-                          style={{ background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)` }}
-                        />
-                        <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>{emoji}</span>
-                      </>
-                    )}
-                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-black/50 border border-gold/25 rounded-full px-2.5 py-1 backdrop-blur-sm">
-                      <span className="text-[10px] leading-none">🚀</span>
-                      <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
-                    </div>
-                    {(entry.ads_count ?? 0) > 0 && (
-                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 border border-white/15 rounded-full px-2 py-1 backdrop-blur-sm">
-                        <Megaphone size={9} className="text-text-muted" />
-                        <span className="text-[9px] text-text-muted">{entry.ads_count}</span>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }} />
-                  </div>
-
-                  <div className="flex flex-col flex-1 p-4 gap-3">
-                    <div>
-                      <h3 className="text-white font-semibold text-[1.05rem] leading-snug truncate mb-0.5">{entry.nome}</h3>
-                      <p className="text-text-muted text-xs">{flag} {entry.pais_origen}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
-                        <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Modelo</p>
-                        <p className="text-[11px] text-text-secondary font-medium truncate">{entry.modelo_preco}</p>
-                      </div>
-                      <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
-                        <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Nicho</p>
-                        <p className="text-[11px] text-gold/80 font-medium truncate">{entry.nicho}</p>
-                      </div>
-                    </div>
-                    {entry.precio && (
-                      <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
-                        <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Precio</p>
-                        <p className="text-[11px] text-white font-semibold truncate">
-                          {monedaSymbol[entry.moneda] ?? ''}{entry.precio}
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setSelectedEntry(entry)}
-                      className="mt-auto w-full py-2 rounded-lg border border-gold/30 text-gold text-[11px] font-semibold hover:bg-gold/8 hover:border-gold/50 transition-colors"
+                    <div
+                      className="relative h-[180px] flex items-center justify-center overflow-hidden shrink-0"
+                      style={{ background: '#161616' }}
                     >
-                      Ver detalles
-                    </button>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        )}
+                      {entry.cover_url ? (
+                        <img src={entry.cover_url} alt={entry.nome} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <div
+                            className="absolute inset-0"
+                            style={{ background: `radial-gradient(ellipse 75% 75% at 50% 65%, ${glow} 0%, transparent 70%)` }}
+                          />
+                          <span className="relative z-10 select-none" style={{ fontSize: 56, lineHeight: 1 }}>{emoji}</span>
+                        </>
+                      )}
+                      <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-black/50 border border-gold/25 rounded-full px-2.5 py-1 backdrop-blur-sm">
+                        <span className="text-[10px] leading-none">🚀</span>
+                        <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
+                      </div>
+                      {(entry.ads_count ?? 0) > 0 && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 border border-white/15 rounded-full px-2 py-1 backdrop-blur-sm">
+                          <Megaphone size={9} className="text-text-muted" />
+                          <span className="text-[9px] text-text-muted">{entry.ads_count}</span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }} />
+                    </div>
+
+                    <div className="flex flex-col flex-1 p-4 gap-3">
+                      <div>
+                        <h3 className="text-white font-semibold text-[1.05rem] leading-snug truncate mb-0.5">{entry.nome}</h3>
+                        <p className="text-text-muted text-xs">{flag} {entry.pais_origen}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
+                          <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Modelo</p>
+                          <p className="text-[11px] text-text-secondary font-medium truncate">{entry.modelo_preco}</p>
+                        </div>
+                        <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
+                          <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Nicho</p>
+                          <p className="text-[11px] text-gold/80 font-medium truncate">{entry.nicho}</p>
+                        </div>
+                      </div>
+                      {entry.precio && (
+                        <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-lg px-2.5 py-2 text-center">
+                          <p className="text-[9px] text-text-muted mb-0.5 uppercase tracking-widest">Precio</p>
+                          <p className="text-[11px] text-white font-semibold truncate">
+                            {monedaSymbol[entry.moneda] ?? ''}{entry.precio}
+                          </p>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setSelectedEntry(entry)}
+                        className="mt-auto w-full py-2 rounded-lg border border-gold/30 text-gold text-[11px] font-semibold hover:bg-gold/8 hover:border-gold/50 transition-colors"
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+          />
+        </div>
       </div>
 
       {/* Details modal */}
@@ -406,7 +571,7 @@ export default function CatalogoClient({ entries, nichos, paises, userEmail, isP
                   </div>
                 </div>
 
-                {/* Métricas de Escala — premium only, only if anuncios_ativos > 0 */}
+                {/* Métricas de Escala — premium only */}
                 {isPremium && (e.anuncios_ativos ?? 0) > 0 && (() => {
                   const m = calcularMetricas(e.anuncios_ativos, e.data_primeiro_anuncio)
                   if (!m) return null
