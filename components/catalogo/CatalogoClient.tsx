@@ -185,6 +185,7 @@ interface Props {
   totalPages: number
   totalCount: number
   pageSize: number
+  lastUpdated: string
   currentFilters: CurrentFilters
 }
 
@@ -201,6 +202,7 @@ export default function CatalogoClient({
   totalPages,
   totalCount,
   pageSize,
+  lastUpdated,
   currentFilters,
 }: Props) {
   // Local state — mirrors URL, gives instant feedback before navigation
@@ -282,7 +284,7 @@ export default function CatalogoClient({
     { label: 'Total SaaS', value: totalCount.toString(), icon: <Database size={15} />, isText: false },
     { label: 'Nichos', value: nichoCount.toString(), icon: <Tag size={15} />, isText: false },
     { label: 'Países', value: paisCount.toString(), icon: <Globe size={15} />, isText: false },
-    { label: 'Actualizado', value: 'Semanal', icon: <RefreshCw size={15} />, isText: true },
+    { label: 'Última actualización', value: lastUpdated, icon: <RefreshCw size={15} />, isText: true },
   ]
 
   const dropdowns = useMemo(() => [

@@ -91,6 +91,22 @@ export default async function CatalogoPage({
   const totalCount = count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
+  // Most recent entry date for the stat card
+  const { data: latestRow } = await supabase
+    .from('saas_entries')
+    .select('created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  const lastUpdated = latestRow?.created_at
+    ? new Date(latestRow.created_at).toLocaleDateString('es', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—'
+
   return (
     <CatalogoClient
       entries={(entries ?? []) as SaasEntry[]}
@@ -103,6 +119,7 @@ export default async function CatalogoPage({
       totalPages={totalPages}
       totalCount={totalCount}
       pageSize={PAGE_SIZE}
+      lastUpdated={lastUpdated}
       currentFilters={{
         nicho: searchParams.nicho ?? 'Todos',
         pais: searchParams.pais ?? 'Todos',
