@@ -31,6 +31,7 @@ interface SearchParams {
   pais?: string
   modelo?: string
   q?: string
+  favoritos?: string
 }
 
 export default async function CatalogoPage({
@@ -62,6 +63,15 @@ export default async function CatalogoPage({
   const paisFilter = searchParams.pais && searchParams.pais !== 'Todos' ? searchParams.pais : null
   const modeloFilter = searchParams.modelo && searchParams.modelo !== 'Todos' ? searchParams.modelo : null
   const searchQuery = searchParams.q?.trim() ?? ''
+  const showingFavorites = searchParams.favoritos === '1'
+
+  // Fetch user's favorited saas IDs
+  const { data: favRows } = await supabase
+    .from('favorites')
+    .select('saas_id')
+    .eq('user_id', user.id)
+
+  const favoritedIds = (favRows ?? []).map((r: { saas_id: string }) => r.saas_id)
 
   // Filtered + paginated entries
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +84,10 @@ export default async function CatalogoPage({
   if (paisFilter) query = query.eq('pais_origen', paisFilter)
   if (modeloFilter) query = query.eq('modelo_preco', modeloFilter)
   if (searchQuery) query = query.ilike('nome', `%${searchQuery}%`)
+  if (showingFavorites) {
+    if (favoritedIds.length === 0) query = query.eq('id', 'no-match')
+    else query = query.in('id', favoritedIds)
+  }
 
   const { data: entries, count, error } = await query.range(from, to)
 
@@ -114,12 +128,15 @@ export default async function CatalogoPage({
       paises={paises}
       modelos={modelos}
       userEmail={userEmail}
+      userId={user.id}
       isPremium={isPremium}
       page={page}
       totalPages={totalPages}
       totalCount={totalCount}
       pageSize={PAGE_SIZE}
       lastUpdated={lastUpdated}
+      favoritedIds={favoritedIds}
+      showingFavorites={showingFavorites}
       currentFilters={{
         nicho: searchParams.nicho ?? 'Todos',
         pais: searchParams.pais ?? 'Todos',

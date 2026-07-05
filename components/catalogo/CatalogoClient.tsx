@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, LogOut, Database, Tag, Globe, RefreshCw,
-  ChevronDown, X, ExternalLink, Megaphone, ChevronLeft, ChevronRight,
+  ChevronDown, X, ExternalLink, Megaphone, ChevronLeft, ChevronRight, Heart,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -180,12 +180,15 @@ interface Props {
   paises: string[]
   modelos: string[]
   userEmail: string
+  userId: string
   isPremium: boolean
   page: number
   totalPages: number
   totalCount: number
   pageSize: number
   lastUpdated: string
+  favoritedIds: string[]
+  showingFavorites: boolean
   currentFilters: CurrentFilters
 }
 
@@ -197,12 +200,15 @@ export default function CatalogoClient({
   paises,
   modelos,
   userEmail,
+  userId,
   isPremium,
   page,
   totalPages,
   totalCount,
   pageSize,
   lastUpdated,
+  favoritedIds,
+  showingFavorites,
   currentFilters,
 }: Props) {
   // Local state — mirrors URL, gives instant feedback before navigation
@@ -211,6 +217,8 @@ export default function CatalogoClient({
   const [modeloFilter, setModeloFilter] = useState(currentFilters.modelo)
   const [search, setSearch] = useState(currentFilters.q)
   const [selectedEntry, setSelectedEntry] = useState<SaasEntry | null>(null)
+  const [favorited, setFavorited] = useState<Set<string>>(() => new Set(favoritedIds))
+  const [togglingFav, setTogglingFav] = useState<string | null>(null)
 
   const router = useRouter()
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -223,13 +231,14 @@ export default function CatalogoClient({
 
   // Build URL and navigate
   const navigate = useCallback(
-    (overrides: Partial<CurrentFilters & { page: number }>) => {
+    (overrides: Partial<CurrentFilters & { page: number; favoritos?: boolean }>) => {
       const merged = {
         nicho: nichoFilter,
         pais: paisFilter,
         modelo: modeloFilter,
         q: search,
         page: 1,
+        favoritos: showingFavorites,
         ...overrides,
       }
       const params = new URLSearchParams()
@@ -238,11 +247,32 @@ export default function CatalogoClient({
       if (merged.pais !== 'Todos') params.set('pais', merged.pais)
       if (merged.modelo !== 'Todos') params.set('modelo', merged.modelo)
       if (merged.page > 1) params.set('page', merged.page.toString())
+      if (merged.favoritos) params.set('favoritos', '1')
       const qs = params.toString()
       router.push(`/catalogo${qs ? `?${qs}` : ''}`)
     },
-    [nichoFilter, paisFilter, modeloFilter, search, router]
+    [nichoFilter, paisFilter, modeloFilter, search, showingFavorites, router]
   )
+
+  const toggleFavorite = async (ev: React.MouseEvent, saasId: string) => {
+    ev.stopPropagation()
+    if (togglingFav === saasId) return
+    const isFav = favorited.has(saasId)
+    // Optimistic update
+    setFavorited(prev => {
+      const next = new Set(prev)
+      if (isFav) next.delete(saasId)
+      else next.add(saasId)
+      return next
+    })
+    setTogglingFav(saasId)
+    if (isFav) {
+      await supabase.from('favorites').delete().match({ user_id: userId, saas_id: saasId })
+    } else {
+      await supabase.from('favorites').insert({ user_id: userId, saas_id: saasId })
+    }
+    setTogglingFav(null)
+  }
 
   const handleSearch = (value: string) => {
     setSearch(value)
@@ -392,18 +422,60 @@ export default function CatalogoClient({
           </div>
         </motion.div>
 
+        {/* Favorites tab */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center gap-2 mb-6"
+        >
+          <button
+            onClick={() => navigate({ favoritos: false, page: 1 })}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
+              !showingFavorites
+                ? 'bg-gold/10 border-gold/30 text-gold'
+                : 'border-white/8 text-text-secondary hover:text-white hover:border-white/20'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => navigate({ favoritos: true, page: 1 })}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
+              showingFavorites
+                ? 'bg-gold/10 border-gold/30 text-gold'
+                : 'border-white/8 text-text-secondary hover:text-white hover:border-white/20'
+            }`}
+          >
+            <Heart size={11} className={showingFavorites ? 'fill-gold text-gold' : ''} />
+            Favoritos
+            {favorited.size > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${showingFavorites ? 'bg-gold/20 text-gold' : 'bg-white/8 text-text-muted'}`}>
+                {favorited.size}
+              </span>
+            )}
+          </button>
+        </motion.div>
+
         {/* Cards grid */}
         <div ref={catalogRef}>
-          {entries.length === 0 ? (
-            <div className="text-center py-20 text-text-secondary text-sm">
-              No se encontraron resultados para tu búsqueda.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {entries.map((entry, i) => {
+          {(() => {
+            const displayedEntries = showingFavorites
+              ? entries.filter(e => favorited.has(e.id))
+              : entries
+            return displayedEntries.length === 0 ? (
+              <div className="text-center py-20 text-text-secondary text-sm">
+                {showingFavorites
+                  ? 'No tienes favoritos aún. Haz clic en ❤️ para guardar un SaaS.'
+                  : 'No se encontraron resultados para tu búsqueda.'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {displayedEntries.map((entry, i) => {
                 const emoji = entry.emoji || entry.nome[0]
                 const flag = flagMap[entry.pais_origen] ?? ''
                 const glow = nichoGlow[entry.nicho] ?? 'rgba(201,168,76,0.10)'
+                const isFav = favorited.has(entry.id)
 
                 return (
                   <motion.div
@@ -433,12 +505,21 @@ export default function CatalogoClient({
                         <span className="text-[10px] leading-none">🚀</span>
                         <span className="text-[10px] text-gold font-medium tracking-wide leading-none">Escalando</span>
                       </div>
-                      {(entry.ads_count ?? 0) > 0 && (
-                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 border border-white/15 rounded-full px-2 py-1 backdrop-blur-sm">
-                          <Megaphone size={9} className="text-text-muted" />
-                          <span className="text-[9px] text-text-muted">{entry.ads_count}</span>
-                        </div>
-                      )}
+                      {/* Heart favorite button */}
+                      <button
+                        onClick={(ev) => toggleFavorite(ev, entry.id)}
+                        className={`absolute top-3 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border transition-all duration-200 ${
+                          isFav
+                            ? 'border-red-500/40 text-red-400'
+                            : 'border-white/15 text-text-muted hover:border-gold/40 hover:text-white'
+                        }`}
+                        title={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                      >
+                        <Heart
+                          size={12}
+                          className={`transition-all duration-200 ${isFav ? 'fill-red-400 text-red-400' : ''}`}
+                        />
+                      </button>
                       <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#111111] to-transparent" />
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%)' }} />
                     </div>
@@ -476,8 +557,9 @@ export default function CatalogoClient({
                   </motion.div>
                 )
               })}
-            </div>
-          )}
+              </div>
+            )
+          })()}
 
           {/* Pagination */}
           <Pagination
