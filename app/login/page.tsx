@@ -110,7 +110,13 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-sm text-text-secondary mt-6">
+      <div className="text-center mt-4">
+        <Link href="/recuperar-password" className="text-text-muted hover:text-text-secondary text-xs transition-colors">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
+
+      <p className="text-center text-sm text-text-secondary mt-4">
         ¿No tienes cuenta?{' '}
         <Link href="/cadastro" className="text-gold hover:text-gold-light transition-colors">
           Regístrate gratis
