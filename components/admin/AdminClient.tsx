@@ -105,6 +105,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
   const [uploading, setUploading] = useState(false)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
+  const [sizeInfo, setSizeInfo] = useState<{ original: number; compressed: number } | null>(null)
   const [saveError, setSaveError] = useState('')
   const [activeTab, setActiveTab] = useState<'catalogo' | 'analytics' | 'usuarios'>('catalogo')
   const [adsPreview, setAdsPreview] = useState<MetaAd[]>([])
@@ -160,6 +161,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
     setForm(EMPTY_FORM)
     setCoverPreview(null)
     setUploadedUrl(null)
+    setSizeInfo(null)
     setSaveError('')
     setAdsPreview([])
     setAdsError('')
@@ -187,32 +189,75 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
     const existingCover = entry.cover_url || null
     setCoverPreview(existingCover)
     setUploadedUrl(existingCover)
+    setSizeInfo(null)
     setSaveError('')
     setModalOpen(true)
   }
 
+  const compressImage = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const objectUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        const MAX_W = 800
+        const scale = img.width > MAX_W ? MAX_W / img.width : 1
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')),
+          'image/webp',
+          0.85
+        )
+      }
+      img.onerror = reject
+      img.src = objectUrl
+    })
+
   const handleCoverFile = async (file: File) => {
     setSaveError('')
+    setSizeInfo(null)
 
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError('La imagen debe ser menor a 2MB.')
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError('La imagen debe ser menor a 5MB.')
       return
     }
 
-    // Show local preview immediately
+    const COMPRESS_THRESHOLD = 200 * 1024
+    const shouldCompress = file.size > COMPRESS_THRESHOLD
+
+    let uploadBlob: Blob = file
+    if (shouldCompress) {
+      try {
+        uploadBlob = await compressImage(file)
+        setSizeInfo({ original: file.size, compressed: uploadBlob.size })
+      } catch {
+        setSaveError('Error al comprimir la imagen.')
+        return
+      }
+    }
+
+    // Show local preview
     const reader = new FileReader()
     reader.onload = (ev) => setCoverPreview(ev.target?.result as string)
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(uploadBlob)
 
     setUploading(true)
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const ext = shouldCompress ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg')
     const path = `${Date.now()}.${ext}`
-
-    console.log('[cover-upload] uploading to saas-covers/', path)
 
     const { data, error } = await supabase.storage
       .from('saas-covers')
-      .upload(path, file, { contentType: file.type, upsert: false })
+      .upload(path, uploadBlob, {
+        contentType: shouldCompress ? 'image/webp' : file.type,
+        cacheControl: '31536000',
+        upsert: true,
+      })
 
     if (error) {
       console.error('[cover-upload] storage error:', error)
@@ -222,12 +267,8 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
     }
 
     const { data: urlData } = supabase.storage.from('saas-covers').getPublicUrl(data.path)
-    const publicUrl = urlData.publicUrl
-
-    console.log('[cover-upload] public URL:', publicUrl)
-
-    setField('cover_url', publicUrl)
-    setUploadedUrl(publicUrl)
+    setField('cover_url', urlData.publicUrl)
+    setUploadedUrl(urlData.publicUrl)
     setUploading(false)
   }
 
@@ -606,7 +647,7 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
                       <div className="flex flex-col items-center gap-2 text-text-secondary pointer-events-none">
                         <ImageIcon size={20} className="text-text-muted" />
                         <span className="text-xs">Haz clic para subir imagen</span>
-                        <span className="text-[10px] text-text-muted">JPG, PNG, WebP · Máx 2MB</span>
+                        <span className="text-[10px] text-text-muted">JPG, PNG, WebP · Se comprime automáticamente</span>
                       </div>
                     )}
                     {uploading && (
@@ -616,9 +657,18 @@ export default function AdminClient({ initialEntries, totalUsers, premiumUsers, 
                     )}
                   </div>
                   {uploadedUrl && !uploading && (
-                    <p className="mt-1.5 text-[10px] text-green-400/70 truncate">
-                      ✓ Imagen subida correctamente
-                    </p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <p className="text-[10px] text-green-400/70">✓ Imagen subida correctamente</p>
+                      {sizeInfo && (
+                        <span className="text-[10px] text-text-muted bg-white/5 border border-white/8 rounded px-1.5 py-0.5">
+                          {(sizeInfo.original / 1024).toFixed(0)} KB → {(sizeInfo.compressed / 1024).toFixed(0)} KB WebP
+                          {' '}
+                          <span className="text-emerald-400/80">
+                            −{Math.round((1 - sizeInfo.compressed / sizeInfo.original) * 100)}%
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
